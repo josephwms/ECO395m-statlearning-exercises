@@ -58,6 +58,7 @@ library(tidyverse)
 library(mosaic)
 
 
+
 ```
 
 
@@ -72,7 +73,8 @@ C) How has the average age of Olympic swimmers changed over time? Does the trend
 
 
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
-
+setwd("/Users/josephwilliams/Desktop/Github_Repos/ECO395m-statlearning-exercises")
+olympics = read.csv("./data/olympics_top20.csv")
 
 ```
 

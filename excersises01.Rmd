@@ -56,8 +56,7 @@ But anything interesting will fly :-).  If you want to try your hand at mapping 
 library(tidyverse)
 library(ggplot2)
 
-setwd("/Users/josephwilliams/Desktop/Github_Repos/ECO395m-statlearning-exercises/data")
-abia_data = read.csv('./ABIA.csv', header = TRUE)
+abia_data = read.csv('./data/ABIA.csv', header = TRUE)
 
 # Converting DepTime to hour of the day
 abia_data$DepHour = floor(abia_data$DepTime / 100)

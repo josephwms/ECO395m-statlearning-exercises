@@ -8,78 +8,136 @@ output: html_document
 
 ## 1) Data visualization: flights at ABIA
 
-This problem involves data exploration and data visualization using `ggplot2` and the `tidyverse`, but is entirely open-ended.   Recall these lessons from ECO s394D and revisit those notes and walkthroughs as needed.   
-
-Consider the data in [ABIA.csv](../data/ABIA.csv), which contains information on every commercial flight in 2008 that either departed from or landed at Austin-Bergstrom Interational Airport.  The variable codebook is as follows: 
-
-- Year    all 2008  
-- Month   1-12  
-- DayofMonth  1-31
-- DayOfWeek   1 (Monday) - 7 (Sunday)
-- DepTime actual departure time (local, hhmm)
-- CRSDepTime  scheduled departure time (local, hhmm)
-- ArrTime actual arrival time (local, hhmm)
-- CRSArrTime  scheduled arrival time (local, hhmm)
-- UniqueCarrier   unique carrier code
-- FlightNum   flight number
-- TailNum plane tail number
-- ActualElapsedTime   in minutes
-- CRSElapsedTime  in minutes
-- AirTime in minutes
-- ArrDelay    arrival delay, in minutes
-- DepDelay    departure delay, in minutes
-- Origin  origin IATA airport code
-- Dest    destination IATA airport code
-- Distance    in miles
-- TaxiIn  taxi in time, in minutes
-- TaxiOut taxi out time in minutes
-- Cancelled   was the flight cancelled?
-- CancellationCode    reason for cancellation (A = carrier, B = weather, C = NAS, D = security)
-- Diverted    1 = yes, 0 = no
-- CarrierDelay    in minutes
-- WeatherDelay    in minutes
-- NASDelay    in minutes 
-- SecurityDelay   in minutes  
-- LateAircraftDelay   in minutes  
-
-Your task is to create a figure, or set of related figures, that tell an interesting story about flights into and out of Austin.  You should annotate your figure(s), of course, but strive to make them as easy to understand as possible at a quick glance.  (A single figure shouldn't need many, many paragraphs to convey its meaning.)   For example, you might consider one of the following questions:  
-
-- What is the best time of day to fly to minimize delays, and does this change by airline?    
-- What is the best time of year to fly to minimize delays, and does this change by destination?  (You'd probably want to focus on a handful of popular destinations.)  
-- How do patterns of flights to different destinations or parts of the country change over the course of the year?  
-- What are the bad airports to fly to and does this change by time of year or day?    
-
-But anything interesting will fly :-).  If you want to try your hand at mapping or looking at geography, you can cross-reference the airport codes here: [https://github.com/datasets/airport-codes](https://github.com/datasets/airport-codes).  Combine this with a mapping package like ggmap, and you should have lots of possibilities!
+For this question we wanted to help flyers (say fliers in 2009) build intuition, or 'rules of thumb', that they can use when choosing between airline companies. To begin we want the data to correspond to recognizable names, so we mapped UniqueCarrier to airline brands or their parent brands.  Here's a breakdown of which major carriers are running the most flights out of ABIA.
 
 
 ```{r setup, message=FALSE, echo=FALSE, warning=FALSE}
 library(tidyverse)
 library(ggplot2)
 
+#codes = read.csv('./data/airport-codes.csv')
 abia_data = read.csv('./data/ABIA.csv', header = TRUE)
+
+#Mapping to tie airlines to carrier codes
+carrier_lookup <- data.frame(
+  UniqueCarrier = sort(unique(abia_data$UniqueCarrier)),
+  Airline = c("Pinnacle", "American", "JetBlue", "North-Western", "Delta", "Alaska", "Frontier", "American", "Celeste", "American", "SkyWest", "United", "SilkAir", "Southwest", "JSX", "United")
+)
+
+#Merge code to airline name
+abia_data = merge(abia_data, carrier_lookup, by = "UniqueCarrier")
+
+#Lets check using airline == Southwest
+data_check = abia_data %>% 
+  select(UniqueCarrier, Airline) %>% 
+  filter(Airline == "Southwest")
+#print(unique(data_check$UniqueCarrier))
+
+#Lets see what the most popular major airlines are
+main_airlines = c("United", "Southwest", "JetBlue", "Delta", "American", "Frontier")
+
+flights_by_airline = abia_data %>% 
+  filter(Airline %in% main_airlines) %>%
+  group_by(Airline) %>%
+  summarize(TotalFlights = n())
+
+
+# Use scale_fill_manual() with the vector of colors
+ggplot(flights_by_airline, aes(x = Airline, y = TotalFlights, fill = Airline)) +
+  geom_col() +
+  labs(title = "Total Flights by Major Airline",
+       x = "Airline",
+       y = "Flights") +
+  theme_minimal()
+
+```
+
+
+Looks like American and Southwest are king... but can they handle this type of volume.  Lets look at arrival delays for each company. Given these are arrival delays for flights coming into and out of Austin, overall it will be a fine measure for the timeliness of the airline.
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
 
 # Converting DepTime to hour of the day
 abia_data$DepHour = floor(abia_data$DepTime / 100)
 
 # Calculate average departure delays by airline and hour
 avg_delays = abia_data %>%
-  group_by(UniqueCarrier, DepHour) %>%
-  summarize(AvgDepDelay = mean(DepDelay, na.rm = TRUE))
+  filter(Airline %in% main_airlines) %>%
+  group_by(Airline, DepHour) %>%
+  summarize(AvgArrDelay = mean(ArrDelay, na.rm = TRUE))
 
 # Plotting average departure delay by airline across different hours of the day 
-ggplot(avg_delays, aes(x = DepHour, y = AvgDepDelay, color = UniqueCarrier)) +
+ggplot(avg_delays, aes(x = DepHour, y = AvgArrDelay, color = Airline)) +
   geom_line() +
   geom_point() +
-  facet_wrap(~UniqueCarrier, scales = "fixed", ncol = 4) + 
+  facet_wrap(~Airline, scales = "fixed", ncol = 3) + 
   theme_minimal() +
-  labs(title = "Average Departure Delays by Airline and Hour of Day",
+  labs(title = "Average Arrival Delays by Airline and Hour",
        x = "Hour of Day",
-       y = "Average Delay in minutes") +
+       y = "Average Delay (Min)") +
   scale_x_continuous(breaks = seq(0, 24, by = 6)) + 
-  theme(legend.position = "none") 
+  theme(legend.position = "none")
 
 ```
 
+Okay, we're seeing some detail here.  Seems like most companies experience their delays before the hour of 6am.  Since we're looking for rules of thumb.  Lets classify into 'Red Eye' 'Early Morning', '9-5' and 'Evening-Night', and see if we can quantify delay times over periods, rather than specific times.  Some of these averages seem too high, too, lets remove observations where ArrDelay is more than 4 hours, since that usually results in a changed flight for me.  Lets also subtract WeatherDelay, SecurityDelay, and NASDelay from ArrivalDelay since those aren't related to the airline.
+
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+
+abia_data$DepHour = as.integer(abia_data$DepHour)
+#missing_values = sum(is.na(abia_data$DepHour))
+#print(missing_values)
+
+abia_data = abia_data[complete.cases(abia_data$DepHour), ]
+abia_data = abia_data %>% filter(DepDelay <= 240)
+
+classify_hour <- function(hour) {
+  ifelse((hour >= 22 & hour < 24) | (hour >= 0 & hour < 2), "Red-Eye",
+         ifelse(hour >= 2 & hour < 9, "Morning",
+                ifelse(hour >= 9 & hour < 17, "9-5", "Evening-Night")))
+}
+
+abia_data = abia_data %>% 
+  mutate(Period = classify_hour(DepHour))
+
+
+avg_delays_period = abia_data %>%
+  filter(Airline %in% main_airlines) %>%
+  mutate(WeatherDelay = coalesce(WeatherDelay, 0)) %>%
+  mutate(SecurityDelay = coalesce(SecurityDelay, 0)) %>%
+  mutate(NASDelay = coalesce(NASDelay, 0)) %>%
+  group_by(Airline, Period) %>%
+  summarize(AvgArrDelay = mean(ArrDelay - WeatherDelay - SecurityDelay - NASDelay, na.rm = TRUE))
+
+
+
+# Define the desired order of the levels for the "Period" variable
+desired_order <- c("Morning", "9-5", "Evening-Night", "Red-Eye")
+
+# Reorder the levels of the "Period" variable
+avg_delays_period <- avg_delays_period %>%
+  mutate(Period = factor(Period, levels = desired_order))
+
+ggplot(avg_delays_period, aes(x = Period, y = AvgArrDelay, fill = Airline)) +
+  geom_col() +
+  facet_wrap(~Airline, scales = "fixed", ncol = 3) + 
+  theme_minimal() +
+  labs(title = "Average Arrival Delays by Airline and Period",
+       x = "Period",
+       y = "Average Delay (Min)") + 
+theme(legend.position = "none", axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+Okay now this is more useful!  These average delay times seem too high, though.  Lets check out the data and see if we can remove some outliers for more useful information.
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+
+
+
+
+```
 
 ### 2) Wrangling the Olympics
 

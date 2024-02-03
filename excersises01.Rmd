@@ -157,7 +157,6 @@ library(dplyr)
 library(ggplot2)
 
 #A
-olympics_data = read.csv('olympics_top20.csv', header = TRUE)
 
 # Filter for female competitors in Athletics events
 unique_female_athletes = olympics_data %>%

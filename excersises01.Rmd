@@ -153,6 +153,59 @@ C) How has the average age of Olympic swimmers changed over time? Does the trend
 setwd("/Users/josephwilliams/Desktop/Github_Repos/ECO395m-statlearning-exercises")
 olympics = read.csv("./data/olympics_top20.csv")
 
+library(dplyr)
+library(ggplot2)
+
+#A
+
+# Filter for female competitors in Athletics events
+unique_female_athletes = olympics_data %>%
+  filter(sex == 'F', grepl('Athletics', event)) %>%
+  distinct(id, .keep_all = TRUE)
+
+# Calculate the 95th percentile of heights
+percentile_95_height = quantile(unique_female_athletes$height, probs = 0.95, na.rm = TRUE)
+
+print(percentile_95_height)
+
+
+#B
+
+females = filter(olympics_data, sex == 'F')
+
+# Calculate the standard deviation of heights for each event
+std_devs = females %>%
+  group_by(event) %>%
+  summarize(HeightStdDev = sd(height, na.rm = TRUE)) %>%
+  ungroup() %>%
+  na.omit()  
+
+# Find the event with the greatest standard deviation in height
+max_std_dev = max(std_devs$HeightStdDev, na.rm = TRUE)
+event_with_greatest_variability = filter(std_devs, HeightStdDev == max_std_dev)
+
+
+print(event_with_greatest_variability)
+
+#C
+
+swimmers = filter(olympics_data, sport == 'Swimming')
+
+# Calculate the average age of swimmers over time for each gender
+avg_age_over_time = swimmers %>%
+  group_by(year, sex) %>%
+  summarize(AverageAge = mean(age, na.rm = TRUE)) %>%
+  ungroup()
+
+# Plot the data with separate lines for male and female swimmers
+ggplot(avg_age_over_time, aes(x = year, y = AverageAge, color = sex)) +
+  geom_line() +
+  labs(title = 'Average Age of Olympic Swimmers Over Time by Gender',
+       x = 'Year',
+       y = 'Average Age') +
+  theme_minimal() 
+
+
 
 
 ```

@@ -7,17 +7,20 @@ output:
     latex_engine: pdflatex
 ---
 
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+library(class)
+library(rsample)
+```
 
 ## 1) Data visualization: flights at ABIA
 
-For this question we wanted to help flyers (say fliers in 2009) build intuition, or 'rules of thumb', that they can use when choosing between airline companies. To begin we want the data to correspond to recognizable names, so we mapped UniqueCarrier to airline brands or their parent brands.  Here's a breakdown of which major carriers are running the most flights out of ABIA.
+For this question we wanted to help fliers (say fliers in 2009) build intuition or 'rules of thumb' they can use when choosing between airline companies. To begin we want the data to correspond to recognizable names, so we mapped UniqueCarrier to airline brands or their parent brands.  Here's a breakdown of which major carriers are running the most flights out of ABIA.
 
 
-```{r setup, message=FALSE, echo=FALSE, warning=FALSE}
-library(tidyverse)
-library(ggplot2)
-
-#codes = read.csv('./data/airport-codes.csv')
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
 abia_data = read.csv('./data/ABIA.csv', header = TRUE)
 
 #Mapping to tie airlines to carrier codes
@@ -33,7 +36,6 @@ abia_data = merge(abia_data, carrier_lookup, by = "UniqueCarrier")
 data_check = abia_data %>% 
   select(UniqueCarrier, Airline) %>% 
   filter(Airline == "Southwest")
-#print(unique(data_check$UniqueCarrier))
 
 #Lets see what the most popular major airlines are
 main_airlines = c("United", "Southwest", "JetBlue", "Delta", "American", "Frontier")
@@ -55,7 +57,7 @@ ggplot(flights_by_airline, aes(x = Airline, y = TotalFlights, fill = Airline)) +
 ```
 
 
-Looks like American and Southwest are king... but can they handle this type of volume.  Lets look at arrival delays for each company. Given these are arrival delays for flights coming into and out of Austin, overall it will be a fine measure for the timeliness of the airline.
+Looks like American and Southwest are king... but can they handle the volume!?  Lets look at arrival delays for each company. Given these are arrival delays for flights coming into and out of Austin, overall it will be a fine measure for the timeliness of the airline.
 
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
 
@@ -68,7 +70,7 @@ avg_delays = abia_data %>%
   group_by(Airline, DepHour) %>%
   summarize(AvgArrDelay = mean(ArrDelay, na.rm = TRUE))
 
-# Plotting average departure delay by airline across different hours of the day 
+# Plotting average Arrival delay by airline across different hours of the day 
 ggplot(avg_delays, aes(x = DepHour, y = AvgArrDelay, color = Airline)) +
   geom_line() +
   geom_point() +
@@ -132,7 +134,7 @@ theme(legend.position = "none", axis.text.x = element_text(angle = 45, hjust = 1
 
 ```
 
-Okay now this is more useful!  These average delay times seem too high, though.  Lets check out the data and see if we can remove some outliers for more useful information.
+Okay now this is more useful!  Let's see, if cost difference is minimal and its important that my flight goes smoothly, I am brand-indifferent for Morning and 9-5 flights, prefer Frontier for night flights, and will only fly United for red-eyes.  You're welcome, 2009 travelers!
 
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
 # See what is the main reason for delay for main airlines. Delete the cancelled airlines and miss data
@@ -164,7 +166,10 @@ ggplot(delay_reason_fre_long, aes(x = Variable, y = value, fill = Variable)) +
   theme(legend.position = "none", axis.text.x = element_text(angle = 60, hjust = 1)) +
   facet_wrap(~ Airline, scales = "free")
 ```
+
 Through the plot we can see for American, Delta, Frontier and JetBlue, the most common reason for delay is NASDelay. For Southwest, the most common reason is LateAircraftDelay and for United it's CarrierDelay.
+
+
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
 ggplot(delay_reason_fre_long, aes(x = Variable, y = value, fill = Variable)) +
   geom_bar(stat = "identity", position = "dodge", alpha = 0.7) +
@@ -173,6 +178,7 @@ ggplot(delay_reason_fre_long, aes(x = Variable, y = value, fill = Variable)) +
        y = "Count") + 
   theme(legend.position = "none", axis.text.x = element_text(angle = 60, hjust = 1))
 ```
+
 However, considering the far ahead flight amount of Southwest Airlines, the overall most common reason for delay is LateAircraftDelay. Now, let's see the proportion of delay time for each reason whether corresponding to their frequency.
 
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
@@ -198,8 +204,8 @@ ggplot(delay_summarized_long, aes(x = Variable, y = value, fill = Variable)) +
   theme_minimal() +
   theme(legend.position = "none", axis.text.x = element_text(angle = 60, hjust = 1)) 
 ```
-We can see for American, Delta and JetBlue, the LateAircraftDelay takes the most part of delay instead of NASDelay while the others remains the same. 
 
+We can see for American, Delta and JetBlue, the LateAircraftDelay takes the most part of delay instead of NASDelay while the others remains the same. 
 
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
 delay_summarized_all = temp %>%
@@ -220,23 +226,15 @@ ggplot(delay_summarized_all_long, aes(x = Variable, y = value, fill = Variable))
   theme_minimal() +
   theme(legend.position = "none", axis.text.x = element_text(angle = 60, hjust = 1)) 
 ```
+
 With no surprise, LateAircraftDealy is the most common reason for all flights. However, all these conclusion may not be valid, since about 85% of the data are missing for delay reason. All our research are based on the rest 15% of the overall data.
 
 ### 2) Wrangling the Olympics
 
-The data in [olympics_top20.csv](../data/olympics_top20.csv) contains information on every Olympic medalist in the top 20 sports by participant count, all the way back to 1896. Use these data to answer the following questions.   (The names of the columns should be self-explanatory.)  
-
-A) What is the 95th percentile of heights for female competitors across all Athletics events (i.e., track and field)?  Note that `sport` is the broad sport (e.g. Athletics) whereas `event` is the specific event (e.g. 100 meter sprint).  
-B) Which single women's `event` had the greatest variability in competitor's heights across the entire history of the Olympics, as measured by the standard deviation?  
-C) How has the average age of Olympic swimmers changed over time? Does the trend look different for male swimmers relative to female swimmers?  Create a data frame that can allow you to visualize these trends over time, then plot the data with a line graph with separate lines for male and female competitors.  Give the plot an informative caption answering the two questions just posed.
-
-
+A) What is the 95th percentile of heights for female competitors across all Athletics events (i.e., track and field)?  
 
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
 olympics_data = read.csv("./data/olympics_top20.csv")
-
-library(dplyr)
-library(ggplot2)
 
 #A
 
@@ -251,7 +249,11 @@ percentile_95_height = quantile(unique_female_athletes$height, probs = 0.95, na.
 print(percentile_95_height)
 
 ```
-A) The 95th percentile of heights for female competitors across all Athletics events is 183.
+
+The 95th percentile of heights for female competitors across all Athletics events is 183.
+
+
+B) Which single women's `event` had the greatest variability in competitor's heights across the entire history of the Olympics, as measured by the standard deviation?  
 
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
 #B
@@ -271,12 +273,13 @@ event_with_greatest_variability = filter(std_devs, HeightStdDev == max_std_dev)
 print(event_with_greatest_variability$event)
 print(event_with_greatest_variability$HeightStdDev)
 ```
-B) Rowing Women's Coxed Fours had the greatest variability in competitor's heights across the entire history of the Olympics and its corresponding standard deviation is 10.86549.
 
-C) Generally, after the female participate in Olympics, the average age of swimmers has a upward trend over years. Before that, the male average age quickly reached a peak at 1924 and then fell down. 
+Rowing Women's Coxed Fours had the greatest variability in competitor's heights across the entire history of the Olympics and its corresponding standard deviation is 10.86549.
+
+
+C) How has the average age of Olympic swimmers changed over time? Does the trend look different for male swimmers relative to female swimmers?
 
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
-#C
 swimmers = filter(olympics_data, sport == 'Swimming')
 
 # Calculate the average age of swimmers over time for each gender
@@ -294,35 +297,14 @@ ggplot(avg_age_over_time, aes(x = year, y = AverageAge, color = sex)) +
   theme_minimal() 
 ```
 
+Average age by gender has increased since 1920s for both type's of athletes but began to increase more rapidly for women leading up to year 2000. Suggesting women are competing at the highest level of sport later in their lives, on average.  This likely a result of increased popularity of woman's sports, effects of title IX.
+
 ### 3) K-nearest neighbors: cars  
-
-The data in [sclass.csv](../data/sclass.csv) contains data on over 29,000 Mercedes S Class vehicles---essentially every such car in this class that was advertised on the secondary automobile market during 2014.  For websites like Cars.com or Truecar that aim to provide market-based pricing information to consumers, the Mercedes S class is a notoriously difficult case.  There is a huge range of sub-models that are all labeled "S Class,"" from large luxury sedans to high-performance sports cars; one sub-category of S class has even served as the safety car in Formula 1 Races.  Moreover, individual submodels involve cars with many different features.  This extreme diversity---unusual for a single model of car---makes it difficult to provide accurate pricing predictions to consumers.
-
-We'll revisit this data set later in the semester when we've got a larger toolkit for building predictive models.  For now, let's focus on three variables in particular:
-- trim: categorical variable for car's trim level, e.g. 350, 63 AMG, etc.  The trim is like a sub-model designation.  
-- mileage: mileage on the car
-- price: the sales price in dollars of the car
-
-Your goal is to use K-nearest neighbors to build a predictive model for price, given mileage, separately for each of two trim levels: 350 and 65 AMG.  (There are lots of other trim levels that you'll be ignoring for this question.) That is, you'll be treating the 350's and the 65 AMG's as two separate data sets.  (Recall the `filter` command.)  
-
-For each of these two trim levels:
-1) Split the data into a training and a testing set.  
-2) Run K-nearest-neighbors, for many different values of K, starting at K=2 and going as high as you need to. For each value of K, fit the model to the training set and make predictions on your test set.
-3) Calculate the out-of-sample root mean-squared error (RMSE) for each value of K.
 
 For each trim, make a plot of RMSE versus K, so that we can see where it bottoms out.  Then for the optimal value of K, show a plot of the fitted model, i.e. predictions vs. x.  (Again, separately for each of the two trim levels.)
 
-Which trim yields a larger optimal value of K?  Why do you think this is?
-
-
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
-
 sclass = read.csv("./data/sclass.csv")
-
-library(tidyverse)
-library(caret)
-library(class)
-library(rsample)
 
 set.seed(17)
 
@@ -343,9 +325,10 @@ split_65_AMG = initial_split(sclass_65_AMG, prop = 0.80)
 train_65_AMG = training(split_65_AMG)
 test_65_AMG = testing(split_65_AMG)
 
+
 # Do the KNN to calculate the RMSE for each K
-run_knn <- function(train_data, test_data) {
-  k_values = seq(2, 60, by = 2) # Define the range of k values
+run_knn = function(train_data, test_data) {
+  k_values = seq(2, 100, by = 2) # Define the range of k values
   rmse_values = numeric(length(k_values)) # To store RMSE for each k
   
   for (i in seq_along(k_values)) {
@@ -388,10 +371,10 @@ ggplot(rmse_results_65_AMG, aes(x = k, y = RMSE)) +
   xlab("K") + ylab("RMSE")
 ```
 
-We have shown the RMSE for different K values vary from 2 to 60 of both trims. For trim 350, the best K value is 14 and for trim 65 AMG, the best K value is 22. 
-
+We have shown the RMSE for different K values vary from 2 to 60 of both trims. For trim 350, the best K value is 14 and for trim 65 AMG, the best K value is 16. 
 
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
+
 # Identify the optimal K for 350 trim
 optimal_k_350 = rmse_results_350[which.min(rmse_results_350$RMSE), ]$k
 

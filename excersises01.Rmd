@@ -214,7 +214,7 @@ Average age by gender has increased since 1920s for both type's of athletes but 
 
 ### 3) K-nearest neighbors: cars  
 
-For each trim, make a plot of RMSE versus K, so that we can see where it bottoms out.  Then for the optimal value of K, show a plot of the fitted model, i.e. predictions vs. x.  (Again, separately for each of the two trim levels.)
+For each trim, make a plot of RMSE versus K, so that we can see where it bottoms out.  Then for the optimal value of K, show a plot of the fitted model, i.e. predictions vs. x.
 
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
 

@@ -236,4 +236,98 @@ Which trim yields a larger optimal value of K?  Why do you think this is?
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
 
 
+
+
+sclass = read.csv("./data/sclass.csv")
+
+library(tidyverse)
+library(caret)
+library(modelr)
+library(rsample)
+
+set.seed(10)
+
+# Filter for the two trim levels
+sclass_350 = sclass %>% filter(trim == '350')
+sclass_65_AMG = sclass %>% filter(trim == '65 AMG')
+
+# Split the data for the 350 trim level
+split_350 = initial_split(sclass_350, prop = 0.80) 
+train_350 = training(split_350)
+test_350 = testing(split_350)
+
+# Split the data for the 65 AMG trim level
+split_65_AMG = initial_split(sclass_65_AMG, prop = 0.80) 
+train_65_AMG = training(split_65_AMG)
+test_65_AMG = testing(split_65_AMG)
+
+run_knn = function(train_data, test_data) {
+  k_values = seq(2, 60, by = 2) # Define the range of k values
+  rmse_values = numeric(length(k_values)) # To store RMSE for each k
+  
+  for (i in seq_along(k_values)) {
+    k = k_values[i]
+    # Train the KNN model
+    knn_model = train(price ~ mileage, data = train_data, method = "knn",
+                       tuneGrid = expand.grid(k = k),
+                            trControl = trainControl(method = "none"))
+    # Make predictions on the test set
+    predictions = predict(knn_model, test_data)
+    # Calculate RMSE and store it
+    rmse_values[i] = RMSE(predictions, test_data$price)
+  }
+  
+  return(data.frame(k = k_values, RMSE = rmse_values))
+}
+
+
+rmse_results_350 = run_knn(train_350, test_350)
+
+
+rmse_results_65_AMG = run_knn(train_65_AMG, test_65_AMG)
+
+# Plotting for 350 trim
+ggplot(rmse_results_350, aes(x = k, y = RMSE)) +
+  geom_line() + geom_point() +
+  ggtitle("RMSE vs K for 350 Trim") +
+  xlab("K") + ylab("RMSE")
+
+# Plotting for 65 AMG trim
+ggplot(rmse_results_65_AMG, aes(x = k, y = RMSE)) +
+  geom_line() + geom_point() +
+  ggtitle("RMSE vs K for 65 AMG Trim") +
+  xlab("K") + ylab("RMSE")
+
+# Identify the optimal K for 350 trim
+optimal_k_350 = rmse_results_350[which.min(rmse_results_350$RMSE), ]$k
+
+# Identify the optimal K for 65 AMG trim
+optimal_k_65_AMG = rmse_results_65_AMG[which.min(rmse_results_65_AMG$RMSE), ]$k
+
+# Function to plot predictions vs mileage for the optimal K
+plot_predictions_vs_mileage = function(train_data, test_data, optimal_k, trim_name) {
+  # Fit the model using the optimal K
+  knn_model_optimal = train(price ~ mileage, data = train_data, method = "knn",
+                            tuneGrid = expand.grid(k = optimal_k),
+                            trControl = trainControl(method = "none"))
+  
+
+  test_data$predicted_price = predict(knn_model_optimal, test_data)
+  
+  
+  ggplot(test_data, aes(x = mileage, y = price)) +
+    geom_point(color = "blue", alpha = 0.5) +
+    geom_line(aes(y = predicted_price), color = "red") +
+    ggtitle(paste("Predictions vs Mileage for", trim_name, "with K =", optimal_k)) +
+    xlab("Mileage") + ylab("Price") +
+    theme_minimal()
+}
+
+# Plot for 350 trim
+plot_predictions_vs_mileage(train_350, test_350, optimal_k_350, "350 Trim")
+
+# Plot for 65 AMG trim
+plot_predictions_vs_mileage(train_65_AMG, test_65_AMG, optimal_k_65_AMG, "65 AMG Trim")
+
+
 ```

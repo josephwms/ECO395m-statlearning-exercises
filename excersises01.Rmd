@@ -301,12 +301,12 @@ Average age by gender has increased since 1920s for both type's of athletes but 
 
 ### 3) K-nearest neighbors: cars  
 
-For each trim, make a plot of RMSE versus K, so that we can see where it bottoms out.  Then for the optimal value of K, show a plot of the fitted model, i.e. predictions vs. x.
+For each trim, make a plot of RMSE versus K, so that we can see where it bottoms out.  Then for the optimal value of K, show a plot of the fitted model, i.e. predictions vs. x.  (Again, separately for each of the two trim levels.)
 
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
 sclass = read.csv("./data/sclass.csv")
 
-set.seed(16)
+set.seed(17)
 
 # Filter for column trim, mileage and price
 sclass = sclass[, c("trim", "mileage", "price")]
@@ -326,20 +326,25 @@ train_65_AMG = training(split_65_AMG)
 test_65_AMG = testing(split_65_AMG)
 
 
+# Do the KNN to calculate the RMSE for each K
 run_knn = function(train_data, test_data) {
   k_values = seq(2, 100, by = 2) # Define the range of k values
   rmse_values = numeric(length(k_values)) # To store RMSE for each k
   
   for (i in seq_along(k_values)) {
     k = k_values[i]
+    
     # Train the KNN model
-    knn_model = train(price ~ mileage, data = train_data, method = "knn",
-                       tuneGrid = expand.grid(k = k),
-                            trControl = trainControl(method = "none"))
-    # Make predictions on the test set
-    predictions = predict(knn_model, test_data)
+    knn_model = knn(train = train_data[, "mileage", drop = FALSE], 
+                     test = test_data[, "mileage", drop = FALSE], 
+                     cl = train_data$price, 
+                     k = k)
+    
+    # Convert knn_model to numeric
+    knn_model = as.numeric(knn_model)
+    
     # Calculate RMSE and store it
-    rmse_values[i] = RMSE(predictions, test_data$price)
+    rmse_values[i] = sqrt(mean((knn_model - test_data$price)^2))
   }
   
   return(data.frame(k = k_values, RMSE = rmse_values))
@@ -353,7 +358,7 @@ rmse_results_65_AMG = run_knn(train_65_AMG, test_65_AMG)
 
 # Plotting for 350 trim
 ggplot(rmse_results_350, aes(x = k, y = RMSE)) +
-  geom_point() +
+  geom_line() + geom_point() +
   ggtitle("RMSE vs K for 350 Trim") +
   xlab("K") + ylab("RMSE")
 ```
@@ -361,10 +366,12 @@ ggplot(rmse_results_350, aes(x = k, y = RMSE)) +
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
 # Plotting for 65 AMG trim
 ggplot(rmse_results_65_AMG, aes(x = k, y = RMSE)) +
-  geom_point() +
+  geom_line() + geom_point() +
   ggtitle("RMSE vs K for 65 AMG Trim") +
   xlab("K") + ylab("RMSE")
 ```
+
+We have shown the RMSE for different K values vary from 2 to 60 of both trims. For trim 350, the best K value is 14 and for trim 65 AMG, the best K value is 16. 
 
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
 
@@ -407,4 +414,3 @@ plot_predictions_vs_mileage(train_350, test_350, optimal_k_350, "350 Trim")
 # Plot for 65 AMG trim
 plot_predictions_vs_mileage(train_65_AMG, test_65_AMG, optimal_k_65_AMG, "65 AMG Trim")
 ```
-

@@ -15,8 +15,9 @@ For this question we wanted to help fliers (say fliers in 2009) build intuition 
 library(tidyverse)
 library(ggplot2)
 
+
 #codes = read.csv('./data/airport-codes.csv')
-#abia_data = read.csv('./data/ABIA.csv', header = TRUE)
+abia_data = read.csv('./data/ABIA.csv', header = TRUE)
 
 #Mapping to tie airlines to carrier codes
 carrier_lookup <- data.frame(

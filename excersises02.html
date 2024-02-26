@@ -415,14 +415,15 @@ not defaulted, including all reasonably close matches in the
 analysis.”</p>
 <p>The problem here is that we are conditioning on defaulted loans and
 thus creating a biased sample. The matching loans associated with
-<em>history</em> == “good” may have other characteristics which are not
-as often associated with default, and so our model may distiguish
-<em>historygood</em> as the feature which best explains variation in
-<em>Default</em>. For this reason, this data set is inappropriate for
-building a model to screen prospective borrowers for default risk.
+<code>history</code> == “good” may have other characteristics which are
+not as often associated with default, and so our model may distiguish
+<code>historygood</code> as the feature which best explains variation in
+<code>Default</code>. For this reason, this data set is inappropriate
+for building a model to screen prospective borrowers for default risk.
 Random sampling would eliminate this issue because there would be a much
-larger number of loans with <em>historygood</em> &amp; <em>default</em>
-== 0, and so other, less-biased relationships might emerge.</p>
+larger number of loans with <code>historygood</code> &amp;
+<code>Default</code> == 0, and so other, less-biased relationships might
+emerge.</p>
 </div>
 <div id="children-and-hotel-reservations" class="section level2">
 <h2>Children and hotel reservations</h2>

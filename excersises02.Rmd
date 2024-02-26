@@ -2,9 +2,10 @@
 title: 'ECO 395M: StatLearning Exercise 1'
 author: "Joseph Williams, Aahil Navroz, Suqian Qi"
 date: "`r Sys.Date()`"
-output:
-  html_document: default
-  md_document: default
+output: 
+#  html_document: default
+  md_document:
+
 ---
 
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
@@ -70,7 +71,7 @@ germancredit %>% group_by(history) %>%
 
 In this visualization we see higher predicted probabilities of default for individuals with good credit vs those with terrible credit. This counter-intuitive result is likely caused by our dubious sampling method that "matches each default with similar sets of loans that had not defaulted, including all reasonably close matches in the analysis."
 
-The problem here is that we are conditioning on defaulted loans and thus creating a biased sample.  The matching loans associated with *history* == "good" may have other characteristics which are not as often associated with default, and so our model may distiguish *historygood* as the feature which best explains variation in *Default*.  For this reason, this data set is inappropriate for building a model to screen prospective borrowers for default risk.  Random sampling would eliminate this issue because there would be a much larger number of loans with *historygood* & *default* == 0, and so other, less-biased relationships might emerge.
+The problem here is that we are conditioning on defaulted loans and thus creating a biased sample.  The matching loans associated with `history` == "good" may have other characteristics which are not as often associated with default, and so our model may distiguish `historygood` as the feature which best explains variation in `Default`.  For this reason, this data set is inappropriate for building a model to screen prospective borrowers for default risk.  Random sampling would eliminate this issue because there would be a much larger number of loans with `historygood` == 1 & `Default` == 0, and so other, less-biased relationships might emerge.
 
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
 

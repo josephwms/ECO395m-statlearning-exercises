@@ -58,15 +58,15 @@ that “matches each default with similar sets of loans that had not
 defaulted, including all reasonably close matches in the analysis.”
 
 The problem here is that we are conditioning on defaulted loans and thus
-creating a biased sample. The matching loans associated with *history*
+creating a biased sample. The matching loans associated with `history`
 == “good” may have other characteristics which are not as often
-associated with default, and so our model may distiguish *historygood*
-as the feature which best explains variation in *Default*. For this
+associated with default, and so our model may distiguish `historygood`
+as the feature which best explains variation in `Default`. For this
 reason, this data set is inappropriate for building a model to screen
 prospective borrowers for default risk. Random sampling would eliminate
 this issue because there would be a much larger number of loans with
-*historygood* & *default* == 0, and so other, less-biased relationships
-might emerge.
+`historygood` == 1 & `Default` == 0, and so other, less-biased
+relationships might emerge.
 
 ## Children and hotel reservations
 

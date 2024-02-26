@@ -3,8 +3,8 @@ title: 'ECO 395M: StatLearning Exercise 1'
 author: "Joseph Williams, Aahil Navroz, Suqian Qi"
 date: "`r Sys.Date()`"
 output:
-  pdf_document: default
   html_document: default
+  md_document: default
 ---
 
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
@@ -14,6 +14,9 @@ library(dplyr)
 library(class)
 library(rsample)
 library(caret)
+
+
+
 ```
 
 ## Saratoga house prices
@@ -30,17 +33,45 @@ Note: When measuring out-of-sample performance, there is _random variation_ due 
 
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
 
+
+
 ```
 
 ## Classification and retrospective sampling
 
-Consider the data in `german_credit.csv` on loan defaults from a German bank.  The outcome variable of interest in this data set is `default`: a 0/1 indicator for whether a loan fell into default at some point before it was paid back to the bank.  All other variables are features of the loan or borrower that might, in principle, help the bank predict whether a borrower is likely to default on a loan.
+*Make a bar plot of default probability by credit history, and build a logistic regression model for predicting default probability, using the variables `duration + amount + installment + age + history + purpose + foreign`.*
 
-This data was collected in a retrospective, "case-control" design.  Defaults are rare, and so the bank sampled a set of loans that had defaulted for inclusion in the study.  It then attempted to match each default with similar sets of loans that had not defaulted, including all reasonably close matches in the analysis.  This resulted in a substantial oversampling of defaults, relative to a random sample of loans in the bank's overall portfolio.  
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+germancredit = read.csv('./data/german_credit.csv')
+#head(germancredit)
 
-Of particular interest here is the "credit history" variable (`history`), in which a borrower's credit rating is classified as "Good", "Poor," or "Terrible."  Make a bar plot of default probability by credit history, and build a logistic regression model for predicting default probability, using the variables `duration + amount + installment + age + history + purpose + foreign`.
+##Make a logistic model for predicting default probability
+logit1 = glm(Default ~ duration + amount + installment + age + history + purpose + foreign, data=germancredit, family='binomial')
+#coef(logit1) %>% round(2)
 
-What do you notice about the `history` variable vis-a-vis predicting defaults?  What do you think is going on here?  In light of what you see here, do you think this data set is appropriate for building a predictive model of defaults, if the purpose of the model is to screen prospective borrowers to classify them into "high" versus "low" probability of default?  Why or why not---and if not, would you recommend any changes to the bank's sampling scheme?
+#predicting probabilities for each obs.
+germancredit$est_prob_default = predict(logit1, germancredit, type='response')
+
+##Bar graph of average predicted default probability by credit history
+germancredit %>% group_by(history) %>% 
+  summarize(means_byhistory = mean(est_prob_default)) %>%
+  ggplot(., aes(x=history, y=means_byhistory, fill=history)) +
+  geom_col() +
+  ylim(0,.7) +
+  labs(title = "Logit-Predicted Probability of Default by History",
+       x = "Credit History",
+       y = "Mean Default Probability") +
+  theme_minimal()
+
+#germancredit %>% group_by(history) %>% summarize(history_count = n()) %>% head()
+```
+
+*What do you notice about the `history` variable vis-a-vis predicting defaults?  What do you think is going on here?  In light of what you see here, do you think this data set is appropriate for building a predictive model of defaults, if the purpose of the model is to screen prospective borrowers to classify them into "high" versus "low" probability of default?  Why or why not---and if not, would you recommend any changes to the bank's sampling scheme?*
+
+In this visualization we see higher predicted probabilities of default for individuals with good credit vs those with terrible credit. This counter-intuitive result is likely caused by our dubious sampling method that "matches each default with similar sets of loans that had not defaulted, including all reasonably close matches in the analysis."
+
+The problem here is that we are conditioning on defaulted loans and thus creating a biased sample.  The matching loans associated with *history* == "good" may have other characteristics which are not as often associated with default, and so our model may distiguish *historygood* as the feature which best explains variation in *Default*.  For this reason, this data set is inappropriate for building a model to screen prospective borrowers for default risk.  Random sampling would eliminate this issue because there would be a much larger number of loans with *historygood* & *default* == 0, and so other, less-biased relationships might emerge.
+
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
 
 ```

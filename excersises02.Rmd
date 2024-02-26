@@ -16,7 +16,7 @@ library(rsample)
 library(caret)
 ```
 
-## 1) Data visualization: flights at ABIA
+## Saratoga house prices
 
 Return to the data set on house prices in Saratoga, NY that we considered in class.  Recall that a starter script here is in `saratoga_lm.R`.  For this data set, you'll run a "horse race" (i.e. a model comparison exercise) between two model classes: linear models and KNN.  
 

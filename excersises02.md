@@ -36,33 +36,37 @@ splits, either randomly or by cross-validation.
 
 ## Classification and retrospective sampling
 
-<em>Make a bar plot of default probability by credit history, and build
-a logistic regression model for predicting default probability, using
-the variables
-`duration + amount + installment + age + history + purpose + foreign`.</em>
+*Make a bar plot of default probability by credit history, and build a
+logistic regression model for predicting default probability, using the
+variables
+`duration + amount + installment + age + history + purpose + foreign`.*
 
 ![](excersises02_files/figure-markdown_strict/unnamed-chunk-3-1.png)
 
-    ## # A tibble: 3 × 2
-    ##   history  history_count
-    ##   <chr>            <int>
-    ## 1 good                89
-    ## 2 poor               618
-    ## 3 terrible           293
-
-What do you notice about the `history` variable vis-a-vis predicting
+*What do you notice about the `history` variable vis-a-vis predicting
 defaults? What do you think is going on here? In light of what you see
 here, do you think this data set is appropriate for building a
 predictive model of defaults, if the purpose of the model is to screen
 prospective borrowers to classify them into “high” versus “low”
 probability of default? Why or why not—and if not, would you recommend
-any changes to the bank’s sampling scheme?
+any changes to the bank’s sampling scheme?*
 
 In this visualization we see higher predicted probabilities of default
-for individuals with good credit vs those with ‘terrible’ credit. This
-is devastatingly counter-intuitive and must be challenged.
+for individuals with good credit vs those with terrible credit. This
+counter-intuitive result is likely caused by our dubious sampling method
+that “matches each default with similar sets of loans that had not
+defaulted, including all reasonably close matches in the analysis.”
 
-We believe that
+The problem here is that we are conditioning on defaulted loans and thus
+creating a biased sample. The matching loans associated with *history*
+== “good” may have other characteristics which are not as often
+associated with default, and so our model may distiguish *historygood*
+as the feature which best explains variation in *Default*. For this
+reason, this data set is inappropriate for building a model to screen
+prospective borrowers for default risk. Random sampling would eliminate
+this issue because there would be a much larger number of loans with
+*historygood* & *default* == 0, and so other, less-biased relationships
+might emerge.
 
 ## Children and hotel reservations
 

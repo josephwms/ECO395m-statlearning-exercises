@@ -15,6 +15,8 @@ library(dplyr)
 library(class)
 library(rsample)
 library(caret)
+library(glmnet) 
+library(pROC)
 
 
 
@@ -165,5 +167,61 @@ So you can see that all of the variables are categorical, sometimes with more th
 Can you predict whether a mushroom is poisonous using machine learning?  Write a short report on the best-performing model you can find using lasso-penalized logistic regression.  Evaluate the out-of-sample performance of your model using a ROC curve.  Based on this ROC curve, recommend a probability threshold for declaring a mushroom poisonous.  How well does your model perform at this threshold, as measured by false positive rate and true positive rate?  
 
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
+
+# Load the mushroom dataset
+mushrooms = read.csv("./data/mushrooms.csv")
+
+# Removing columns that would have factors with less than 2 levels
+mushrooms = mushrooms[sapply(mushrooms, function(x) length(unique(x)) > 1)]
+
+# Convert all categorical variables to factors
+mushrooms = mushrooms %>% mutate_if(is.character, as.factor)
+
+# Encode the target variable 'class' as binary
+mushrooms$class = as.numeric(mushrooms$class) - 1
+
+# Create a training and test dataset
+set.seed(42) # For reproducibility
+training_index = createDataPartition(mushrooms$class, p = 0.8, list = FALSE)
+train_data = mushrooms[training_index, ]
+test_data = mushrooms[-training_index, ]
+
+# Prepare the model matrix
+x_train = model.matrix(class ~ . - 1, data = train_data) # -1 to exclude intercept
+y_train = train_data$class
+
+x_test = model.matrix(class ~ . - 1, data = test_data)
+y_test = test_data$class
+
+# Fit the lasso-penalized logistic regression model
+cv_fit = cv.glmnet(x_train, y_train, family = "binomial", alpha = 1)
+
+plot(cv_fit)
+
+# Print the minimum lambda value used
+print(cv_fit$lambda.min)
+
+# Predict on the test set
+# Here we extract the probabilities for the class of interest (which is the second column of the predict matrix)
+predictions = predict(cv_fit, newx = x_test, s = "lambda.min", type = "response")[,1]
+
+# Generate the ROC curve
+roc_result = roc(response = y_test, predictor = predictions)
+plot(roc_result, main = "ROC Curve")
+
+# Find the optimal threshold
+coords(roc_result, "best", ret = c("threshold", "sensitivity", "specificity"))
+
+# Use the optimal threshold to predict whether a mushroom is poisonous
+optimal_threshold = coords(roc_result, "best", ret = "threshold")
+predicted_classes = ifelse(predictions > optimal_threshold, 1, 0)
+
+optimal_threshold
+
+best_coords = coords(roc_result, "best", ret = c("specificity", "sensitivity"))
+fpr = 1 - best_coords["specificity"]
+tpr = best_coords["sensitivity"]
+
+list(FPR = fpr, TPR = tpr)
 
 ```

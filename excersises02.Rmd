@@ -332,7 +332,8 @@ How well does your model do at predicting the total number of bookings with chil
 mushrooms = read.csv("./data/mushrooms.csv")
 
 # Removing columns that would have factors with less than 2 levels
-mushrooms = mushrooms[sapply(mushrooms, function(x) length(unique(x)) > 1)]
+mushrooms <- mushrooms %>%
+  select_if(~n_distinct(.) > 1)
 
 # Convert all categorical variables to factors
 mushrooms = mushrooms %>% mutate_if(is.character, as.factor)
@@ -370,20 +371,21 @@ predictions = predict(cv_fit, newx = x_test, s = "lambda.min", type = "response"
 # Generate the ROC curve
 roc_result = roc(response = y_test, predictor = predictions)
 plot(roc_result, main = "ROC Curve")
-
-# The ROC curve in this case is not exactly a curve but rather 2 perpendicular lines that intersect at (1,1). This means that the model has high sensitivity and high specificity and thus is effective at distinguishing between the two classes (poisonous and non-poisonous mushrooms).
+ 
+# In this case, the ROC curve does not resemble the typical curve but rather mirrors the shape of a right triangle. This sort of configuration indicates that the lasso-penalized logistic regression model has exceptional classification accuracy. This is because a right triangle shape suggests a model characterized by both high sensitivity and high specificity.
 
 # Find the optimal threshold
 coords(roc_result, "best", ret = c("threshold", "sensitivity", "specificity"))
-
 
 best_coords = coords(roc_result, "best", ret = c("specificity", "sensitivity"))
 fpr = 1 - best_coords["specificity"]
 tpr = best_coords["sensitivity"]
 
-list(FPR = fpr, TPR = tpr)
+cat(paste("FPR", fpr ), "\n")
+cat(paste("TPR", tpr ), "\n")
 
-# Based on the ROC curve I would recommend a probability threshold of 0.5017094. Since we have a false positive rate of 0 and a true positive of 1, it is safe to say that our model performs exceptionally well at this threshold. 
+# Based on the ROC curve I would recommend a probability threshold of 0.5017094. Since we have a false positive rate of 0 and a true positive of 1, it is safe to say that our model performs exceptionally well at this threshold. In conclusion, we are indeed able to predict whether a mushroom is poisonous or not by using machine learning. 
+
 
 ```
 

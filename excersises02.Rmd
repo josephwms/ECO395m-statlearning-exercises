@@ -17,6 +17,8 @@ library(rsample)
 library(caret)
 library(glmnet) 
 library(pROC)
+library(gamlr)
+library(mosaic)
 ```
 
 ## Saratoga house prices
@@ -32,10 +34,79 @@ Note: When measuring out-of-sample performance, there is _random variation_ due 
 
 
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
+# input and standardized the data
+data(SaratogaHouses)
+data_stand = SaratogaHouses
+data_stand = sapply(data_stand, as.numeric)
+data_stand = data.frame(data_stand)
+data_stand[, -1] = scale(data_stand[, -1])
 
+# Generate polynomial features up to power of 2 with interactions for each variable
+predictor = data_stand[,-1]
+predictors_interaction = model.matrix(~ .^2, data = data.frame(predictor))^2
+squared_matrix = sapply(predictor, function(x) x^2)
+colnames(squared_matrix) = paste0("sq_", names(predictor))
+predictors = cbind(predictors_interaction,squared_matrix)
 
+set.seed(17)
 
+# Fit the data using lasso model
+cv_model = cv.gamlr(x = predictors, y = data_stand$price, alpha = 1)
+coef(cv_model, s = "1se")
+lasso_rmse = sqrt(cv_model$cvm[cv_model$seg.1se])
 ```
+
+Before fitting data to models, we first standardized all the data except price. Now all variables have same predictive effect on price. For the linear model, we generate the polynomial terms up to 2nd power and fit the data with lasso model to do the feature selection. Under cross-validation and 1se criterion, we chose the final model: price ~ landvalue + heating + centralAir + livingArea:centralAir + bathrooms:centralAir + rooms:centralAir + heating:fuel + sq_landValue. Among all the coefficients, centralAir is far bigger than the others and variables related to house area are significant when they intersect with centralAir. The rest two features, landValue and heating also survive, but the square of lanValue is weakly correlated. So we conclude that the landValue, heating and centalAir are three most predictive factor for price.
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+# KNN Model
+set.seed(17)
+# Use lasso model to provide feature selection guidance for knn
+lasso_guide = cv.gamlr(x = predictor, y = data_stand$price, alpha = 1)
+coef(lasso_guide, s = "1se")
+
+run_knnreg_cv = function(data, num_folds) {
+  k_values = seq(2, 100, by = 2)  # values of k to be evaluated
+  
+  # Initialize dataframe to store results
+  results_df = data.frame(k = integer(), avg_rmse = numeric())
+  
+  # Perform cross-validation for each value of k
+  for (k in k_values) {
+    # Initialize vector to store RMSE values for each fold
+    rmse_values = numeric(num_folds)
+    # Create indices for cross-validation folds
+    folds = sample(rep(1:num_folds, length.out = nrow(data)))
+    # Iterate through each fold
+    for (fold in 1:num_folds) {
+      # Extract training and testing data for this fold
+      train_data = data[folds != fold, ]
+      test_data = data[folds == fold, ]
+      # Perform KNN regression
+      model = knnreg(price ~ landValue + livingArea + bathrooms + waterfront + centralAir, data = train_data, k = k)
+      # Make predictions
+      predictions = predict(model, test_data)
+      # Calculate RMSE for this fold
+      temp = (predictions - test_data["price"])^2
+      rmse_values[fold] = sqrt(mean(temp$price))
+    }
+    # Calculate average RMSE across all folds
+    avg_rmse = mean(rmse_values)
+    # Append results to dataframe
+    results_df = rbind(results_df, data.frame(k = k, avg_rmse = avg_rmse))
+  }
+  return(results_df)
+}
+rmse_result = run_knnreg_cv(data_stand, 10)
+ggplot(rmse_result, aes(x = k, y = avg_rmse)) +
+  geom_line() + geom_point() +
+  ggtitle("Average RMSE vs K") +
+  xlab("K") + ylab("RMSE")
+optimal_k = rmse_result[which.min(rmse_result$avg_rmse), ]$k
+knn_rmse = rmse_result[optimal_k/2,]$avg_rmse
+```
+
+For the KNN model, we use lasso model to do the feature selection for us. We assuming that features that are more important in Lasso also make sense in KNN model. We choose landValue, livingArea, bathrooms, waterfront and centralAir to fit the KNN model. Under CV, we choose the optimal k equal to 22. As a result, the RMSE for lasso model in part 1 is 82860.643 and for KNN model is 59689.196. SO KNN model performs better in out-of-sample RMSE. All the RMSE here are the average RMSE under cross-validation. 
 
 ## Classification and retrospective sampling
 

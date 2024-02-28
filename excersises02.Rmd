@@ -53,8 +53,9 @@ set.seed(17)
 
 # Fit the data using lasso model
 cv_model = cv.gamlr(x = predictors, y = data_stand$price, alpha = 1)
-coef(cv_model, s = "1se")
+cv_model_coef = coef(cv_model, s = "1se")
 lasso_rmse = sqrt(cv_model$cvm[cv_model$seg.1se])
+print(lasso_rmse)
 ```
 
 Before fitting data to models, we first standardized all the data except price. Now all variables have same predictive effect on price. For the linear model, we generate the polynomial terms up to 2nd power and fit the data with lasso model to do the feature selection. Under cross-validation and 1se criterion, we chose the final model: price ~ landvalue + heating + centralAir + livingArea:centralAir + bathrooms:centralAir + rooms:centralAir + heating:fuel + sq_landValue. Among all the coefficients, centralAir is far bigger than the others and variables related to house area are significant when they intersect with centralAir. The rest two features, landValue and heating also survive, but the square of lanValue is weakly correlated. So we conclude that the landValue, heating and centalAir are three most predictive factor for price.
@@ -193,7 +194,7 @@ base1 = train(
 cat('base1 coefficients:')
 print(coef(base1$finalModel) %>% round(2))
 
-cat(paste('base1 RMSE:', base1$results$RMSE %>% round(4)))
+cat(paste('base1 cv RMSE:', base1$results$RMSE %>% round(4)))
 ```
 
 2. baseline 2: a big model that uses all the possible predictors _except_ the `arrival_date` variable (main effects only).  
@@ -219,20 +220,29 @@ cat(paste('base2 RMSE:', base2$results$RMSE %>% round(4)))
 3. the best linear model you can build, including any engineered features that you can think of that improve the performance (interactions, features derived from time stamps, etc).
 
 ```{r, message=FALSE, echo=FALSE, warning=FALSE, results='hide'}
-base3x = model.matrix(children ~ .-1 - arrival_date, data=hoteldev) # do -1 to drop intercept!
-base3y = hoteldev$children
+# base3x = model.matrix(children ~ .-1 - arrival_date, data=hoteldev) # do -1 to drop intercept!
+# base3y = hoteldev$children
 
 #first eliminate year from arrival_date
-#hoteldev$arrival_date <- substr(hoteldev$arrival_date, 6, 10)
+hoteldev$arrival_date <- substr(hoteldev$arrival_date, 6, 10)
 
-set.seed(187)
-base3 = cv.gamlr(base3x, base3y, nfold=10, family="binomial", verb=TRUE)
+base3 = train(
+  form = children ~ hotel + meal + reserved_room_type + poly(adults,2) + poly(average_daily_rate,2) + total_of_special_requests + arrival_date,
+  data = hoteldev,
+  trControl = trainControl(method = "cv", number = 10),
+  method = "glm",
+  family = "binomial"
+)
 
-base3.min = coef(base3, select='min') #this is the minimized lasso
-base3.1se = coef(base3) #we want the simpler model
-cat(paste("base3 is a lasso with lambda =", log(base3$lambda.1se) %>% round(4), " and a total of", sum(base3.1se!=0), "coefficients"))
-print()
-cat(paste('base3 RMSE:', sqrt(base3$cvm[base3$seg.1se]) %>% round(4)))
+cat(paste('base3 RMSE:', base2$results$RMSE %>% round(4)))
+
+#base3 = cv.gamlr(base3x, base3y, nfold=10, family="binomial", verb=TRUE)
+
+# base3.min = coef(base3, select='min') #this is the minimized lasso
+# base3.1se = coef(base3) #we want the simpler model
+# cat(paste("base3 is a lasso with lambda =", log(base3$lambda.1se) %>% round(4), " and a total of", sum(base3.1se!=0), "coefficients"))
+# base3.1se
+# cat(paste('base3 RMSE:', sqrt(base3$cvm[base3$seg.1se]) %>% round(4)))
 
 
 ```

@@ -15,6 +15,8 @@ library(dplyr)
 library(class)
 library(rsample)
 library(caret)
+library(glmnet) 
+library(pROC)
 ```
 
 ## Saratoga house prices
@@ -153,3 +155,98 @@ How well does your model do at predicting the total number of bookings with chil
 
 ```
 
+## Mushroom classification
+
+The data in [mushrooms.csv](../data/mushrooms.csv) correspond to 23 species of gilled mushrooms in the Agaricus and Lepiota Family.  Each species is identified as definitely edible (class = e), definitely poisonous (class = p), or of unknown edibility and not recommended.  (This latter class was combined with the poisonous one.)  There is no simple rule for determining the edibility of a mushroom, analogous to "leaves of three, let it be" for poison ivy.  
+
+The features in the data set are as follows:
+
+| Attribute Name               | Description                                                                 |
+|------------------------------|-----------------------------------------------------------------------------|
+| cap-shape                    | bell=b, conical=c, convex=x, flat=f, knobbed=k, sunken=s                    |
+| cap-surface                  | fibrous=f, grooves=g, scaly=y, smooth=s                                     |
+| cap-color                    | brown=n, buff=b, cinnamon=c, gray=g, green=r, pink=p, purple=u, red=e, white=w, yellow=y |
+| bruises                      | bruises=t, no=f                                                             |
+| odor                         | almond=a, anise=l, creosote=c, fishy=y, foul=f, musty=m, none=n, pungent=p, spicy=s |
+| gill-attachment              | attached=a, descending=d, free=f, notched=n                                 |
+| gill-spacing                 | close=c, crowded=w, distant=d                                               |
+| gill-size                    | broad=b, narrow=n                                                           |
+| gill-color                   | black=k, brown=n, buff=b, chocolate=h, gray=g, green=r, orange=o, pink=p, purple=u, red=e, white=w, yellow=y |
+| stalk-shape                  | enlarging=e, tapering=t                                                     |
+| stalk-root                   | bulbous=b, club=c, cup=u, equal=e, rhizomorphs=z, rooted=r, missing=?       |
+| stalk-surface-above-ring     | fibrous=f, scaly=y, silky=k, smooth=s                                       |
+| stalk-surface-below-ring     | fibrous=f, scaly=y, silky=k, smooth=s                                       |
+| stalk-color-above-ring       | brown=n, buff=b, cinnamon=c, gray=g, orange=o, pink=p, red=e, white=w, yellow=y |
+| stalk-color-below-ring       | brown=n, buff=b, cinnamon=c, gray=g, orange=o, pink=p, red=e, white=w, yellow=y |
+| veil-type                    | partial=p, universal=u                                                      |
+| veil-color                   | brown=n, orange=o, white=w, yellow=y                                        |
+| ring-number                  | none=n, one=o, two=t                                                        |
+| ring-type                    | cobwebby=c, evanescent=e, flaring=f, large=l, none=n, pendant=p, sheathing=s, zone=z |
+| spore-print-color            | black=k, brown=n, buff=b, chocolate=h, green=r, orange=o, purple=u, white=w, yellow=y |
+| population                   | abundant=a, clustered=c, numerous=n, scattered=s, several=v, solitary=y     |
+| habitat                      | grasses=g, leaves=l, meadows=m, paths=p, urban=u, waste=w, woods=d          |
+
+
+So you can see that all of the variables are categorical, sometimes with more than 2 levels.
+
+Can you predict whether a mushroom is poisonous using machine learning?  Write a short report on the best-performing model you can find using lasso-penalized logistic regression.  Evaluate the out-of-sample performance of your model using a ROC curve.  Based on this ROC curve, recommend a probability threshold for declaring a mushroom poisonous.  How well does your model perform at this threshold, as measured by false positive rate and true positive rate?  
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+
+# Load the mushroom dataset
+mushrooms = read.csv("./data/mushrooms.csv")
+
+# Removing columns that would have factors with less than 2 levels
+mushrooms = mushrooms[sapply(mushrooms, function(x) length(unique(x)) > 1)]
+
+# Convert all categorical variables to factors
+mushrooms = mushrooms %>% mutate_if(is.character, as.factor)
+
+# Encode the target variable 'class' as binary
+mushrooms$class = as.numeric(mushrooms$class) - 1
+
+# Create a training and test dataset
+set.seed(42) # For reproducibility
+training_index = createDataPartition(mushrooms$class, p = 0.8, list = FALSE)
+train_data = mushrooms[training_index, ]
+test_data = mushrooms[-training_index, ]
+
+# Prepare the model matrix
+x_train = model.matrix(class ~ . - 1, data = train_data) # -1 to exclude intercept
+y_train = train_data$class
+
+x_test = model.matrix(class ~ . - 1, data = test_data)
+y_test = test_data$class
+
+# Fit the lasso-penalized logistic regression model
+cv_fit = cv.glmnet(x_train, y_train, family = "binomial", alpha = 1)
+
+plot(cv_fit)
+
+# Print the minimum lambda value used
+print(cv_fit$lambda.min)
+
+# Predict on the test set
+# Here we extract the probabilities for the class of interest (which is the second column of the predict matrix)
+predictions = predict(cv_fit, newx = x_test, s = "lambda.min", type = "response")[,1]
+
+# Generate the ROC curve
+roc_result = roc(response = y_test, predictor = predictions)
+plot(roc_result, main = "ROC Curve")
+
+# Find the optimal threshold
+coords(roc_result, "best", ret = c("threshold", "sensitivity", "specificity"))
+
+# Use the optimal threshold to predict whether a mushroom is poisonous
+optimal_threshold = coords(roc_result, "best", ret = "threshold")
+predicted_classes = ifelse(predictions > optimal_threshold, 1, 0)
+
+optimal_threshold
+
+best_coords = coords(roc_result, "best", ret = c("specificity", "sensitivity"))
+fpr = 1 - best_coords["specificity"]
+tpr = best_coords["sensitivity"]
+
+list(FPR = fpr, TPR = tpr)
+
+```

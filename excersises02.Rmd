@@ -15,24 +15,23 @@ library(dplyr)
 library(class)
 library(rsample)
 library(caret)
-library(glmnet) 
+library(glmnet)
+library(gamlr)
 library(pROC)
 library(gamlr)
 library(mosaic)
 library(Metrics)
 library(MASS)
+library(modelr)
+
 ```
 
 ## Saratoga house prices
 
 Return to the data set on house prices in Saratoga, NY that we considered in class.  Recall that a starter script here is in `saratoga_lm.R`.  For this data set, you'll run a "horse race" (i.e. a model comparison exercise) between two model classes: linear models and KNN.  
 
-- Build the best linear model for price that you can.  It should clearly outperform the "medium" model that we considered in class.  Use any combination of transformations, engineering features, polynomial terms, and interactions that you want; and use any strategy for selecting the model that you want.  
-- Now build the best K-nearest-neighbor regression model for price that you can.  Note: you still need to choose which features should go into a KNN model, but you don't explicitly include interactions or polynomial terms.  The method is sufficiently adaptable to find interactions and nonlinearities, if they are there.   But do make sure to _standardize_ your variables before applying KNN, or at least do something that accounts for the large differences in scale across the different variables here.  
-
-Which model seems to do better at achieving lower out-of-sample mean-squared error?   Write a report on your findings as if you were describing your price-modeling strategies for a local taxing authority, who needs to form predicted market values for properties in order to know how much to tax them.  Keep the main focus on the conclusions and model performance; any relevant technical details should be put in an appendix.  
-
-Note: When measuring out-of-sample performance, there is _random variation_ due to the particular choice of data points that end up in your train/test split.  Make sure your script addresses this by averaging the estimate of out-of-sample RMSE over many different random train/test splits, either randomly or by cross-validation.
+*- Build the best linear model for price that you can.  It should clearly outperform the "medium" model that we considered in class.  Use any combination of transformations, engineering features, polynomial terms, and interactions that you want; and use any strategy for selecting the model that you want. * 
+*- Now build the best K-nearest-neighbor regression model for price that you can.  Note: you still need to choose which features should go into a KNN model, but you don't explicitly include interactions or polynomial terms.  The method is sufficiently adaptable to find interactions and nonlinearities, if they are there.   But do make sure to _standardize_ your variables before applying KNN, or at least do something that accounts for the large differences in scale across the different variables here.*
 
 
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
@@ -106,7 +105,6 @@ for (i in 1:10) {
   rmse_values1[i] = RMSE(y_test, y_pred)
 }
 linear_rmse1 = mean(rmse_values1)
-
 ```
 
 We combine the terms appeared in Lasso and Ridge regression and we get a better linear model than the medium one. Then we go with KNN model.
@@ -161,7 +159,9 @@ optimal_k = rmse_result[which.min(rmse_result$avg_rmse), ]$k
 knn_rmse = rmse_result[optimal_k/2,]$avg_rmse
 ```
 
+
 For the KNN model, we use lasso model to do the feature selection for us. We assuming that features that are more important in Lasso also make sense in KNN model. We choose lotSize, landValue, livingArea, bathrooms, rooms, waterfront, newConstruction and centralAir to fit the KNN model. Under CV, we choose the optimal k equal to 18. However, KNN model performs worse in out-of-sample RMSE than medium and our newly find model. All the RMSE here are the average RMSE under cross-validation. 
+
 
 ## Classification and retrospective sampling
 
@@ -196,126 +196,183 @@ germancredit %>% group_by(history) %>%
 
 In this visualization we see higher predicted probabilities of default for individuals with good credit vs those with terrible credit. This counter-intuitive result is likely caused by our dubious sampling method that "matches each default with similar sets of loans that had not defaulted, including all reasonably close matches in the analysis."
 
-The problem here is that we are conditioning on defaulted loans and thus creating a biased sample.  The matching loans associated with `history` == "good" may have other characteristics which are not as often associated with default, and so our model may distiguish `historygood` as the feature which best explains variation in `Default`.  For this reason, this data set is inappropriate for building a model to screen prospective borrowers for default risk.  Random sampling would eliminate this issue because there would be a much larger number of loans with `historygood` == 1 & `Default` == 0, and so other, less-biased relationships might emerge.
-
-```{r, message=FALSE, echo=FALSE, warning=FALSE}
-
-```
+The problem here is that we are conditioning on defaulted loans and thus creating a biased sample.  The matching loans associated with `history` == "good" may have other characteristics which are not as often associated with default, and so our model may distinguish `historygood` as the feature which best explains variation in `Default`.  For this reason, this data set is inappropriate for building a model to screen prospective borrowers for default risk.  Random sampling would eliminate this issue because there would be a much larger number of loans with `historygood` == 1 & `Default` == 0, and so other, less-biased relationships might emerge.
 
 
-```{r, message=FALSE, echo=FALSE, warning=FALSE}
 
-```
 ## Children and hotel reservations
 
 *The files `hotels_dev.csv` and `hotels_val.csv` contains data on tens of thousands of hotel stays from a major U.S.-based hotel chain.  The goal of this problem is simple: to build a predictive model for whether a hotel booking will have children on it. This is an excellent use case for an ML model: a piece of software that can scan the bookings for the week ahead and produce an estimate for how likely each one is to have a "hidden" child on it.*
-
-
-```{r, message=FALSE, echo=FALSE, warning=FALSE}
-hoteldev = read.csv('./data/hotels_dev.csv')
-hotelval = read_csv('./data/hotels_val.csv')
-```
 
 
 ### Model building
 
 *Using only the data in `hotels.dev.csv`, please compare the out-of-sample performance of the following models:*
 
-1. baseline 1: a small model that uses only the `market_segment`, `adults`, `customer_type`, and `is_repeated_guest` variables as features.
+1. *baseline 1: a small model that uses only the `market_segment`, `adults`, `customer_type`, and `is_repeated_guest` variables as features.*
+
+
+For baseline 1 we used a linear model using the lm function in R.  We then ran k-fold validation with k=10 and calculated the mean RMSE [below].
 
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
+hoteldev = read.csv('./data/hotels_dev.csv')
+hotelval = read.csv('./data/hotels_val.csv')
 
-#Look up traincontrol
-#When measuring out-of-sample performance,average the estimate of out-of-sample RMSE over many different random train/test splits, or using cross-validation.
+set.seed(1)
 
-# hotel_split = initial_split(hoteldev, prop = 0.8)
-# hotel_train = training(hotel_split)
-# hotel_test = testing(hotel_split)
+#hoteldev$arrival_date <- substr(hoteldev$arrival_date, 6, 10)
 
-#base1 = glm(children ~ market_segment + customer_type + is_repeated_guest, data=hotel_train, family='binomial')
+hotel_folds = crossv_kfold(hoteldev, k=10)
 
-#Train and cross validate, same step
-base1 = train(
-  form = children ~ market_segment + customer_type + is_repeated_guest,
-  data = hoteldev,
-  trControl = trainControl(method = "cv", number = 10),
-  method = "glm",
-  family = "binomial"
-)
+hotels1 = map(hotel_folds$train, ~ lm(children ~ market_segment + customer_type + is_repeated_guest, data=.))
+#hotels1.1 = map(hotel_folds$train, ~ glm(children ~ market_segment + customer_type + is_repeated_guest, data=., family='binomial'))
 
-print(paste("base1 RMSE:", base1$results$RMSE %>% round(4)))
-
-# Access coefficients from the model object
-print(paste("base1 coefficients:", coef(base1$finalModel) %>% round(2)))
+cat(paste('base1 RMSE:', map2_dbl(hotels1, hotel_folds$test, modelr::rmse) %>% mean %>% round(4)))
+#cat(paste('base1.1 RMSE:', map2_dbl(hotels1.1, hotel_folds$test, modelr::rmse) %>% mean %>% round(4)))
 
 ```
 
-2. baseline 2: a big model that uses all the possible predictors _except_ the `arrival_date` variable (main effects only).  
+2. *baseline 2: a big model that uses all the possible predictors _except_ the `arrival_date` variable (main effects only).*  Same approach as [above] with marginal gains.
 
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
 
-3. the best linear model you can build, including any engineered features that you can think of that improve the performance (interactions, features derived from time stamps, etc).  
+hotels2 = map(hotel_folds$train, ~ lm(children ~ . - arrival_date, data=.))
 
-Use the `hotels_dev.csv` file for your __entire__ model building and testing pipeline.  That is, you'll create your train/test splits using `hotels_dev` only, and not testing at all on `hotels_val`.  Everything in `hotels_val` should be held back for the next part of this exercise.
+cat(paste('base2 RMSE:', map2_dbl(hotels2, hotel_folds$test, modelr::rmse) %>% mean %>% round(4)))
 
-Note: you can measure out-of-sample performance in any reasonable way that we've talked about in class or that you've encountered in the reading, as long as you are clear how you're doing it.  
+```
+
+3. *the best linear model you can build, including any engineered features that you can think of that improve the performance (interactions, features derived from time stamps, etc).*
+
+I tested various linear models and arrived at base3.3 which is base2 with the following additional terms: 
+
+- `poly(adults, 2)`
+- `poly(total_of_special_requests, 2)`
+- `required_car_parking_spaces:poly(adults, 2)`
+- `reserved_room_type:customer_type`
+- `reserved_room_type:average_daily_rate`
+- `reserved_room_type:meal`
+- `reserved_room_type:stays_in_weekend_nights`
+- `reserved_room_type:hotel`
+- `hotel:stays_in_weekend_nights`
+
+NOTE: base3.4 includes these terms + `arrival_date` which has been re-coded to eliminate "yyyy" so to capture a day-of-the-year effect.  We see that base3.4 is more significant but only improves RSME by a fraction of percentage at the expense of adding hundreds of variables.  Thus, we will move forward with base 3.3.
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+
+hotels3.3 = map(hotel_folds$train, ~ lm(children ~ . - arrival_date + poly(adults, 2) + required_car_parking_spaces:poly(adults, 2) + poly(total_of_special_requests, 2) + reserved_room_type:customer_type + reserved_room_type:average_daily_rate + reserved_room_type:meal + reserved_room_type:stays_in_weekend_nights + reserved_room_type:hotel + hotel:stays_in_weekend_nights, data=.))
+#hold off on arrival date for now
+
+# hotels3.4 = map(hotel_folds$train, ~ lm(children ~ . + poly(adults, 2) + required_car_parking_spaces:poly(adults, 2) + poly(total_of_special_requests, 2) + reserved_room_type:customer_type + reserved_room_type:average_daily_rate + reserved_room_type:meal + reserved_room_type:stays_in_weekend_nights + reserved_room_type:hotel + hotel:stays_in_weekend_nights, data=.))
+#finally add arrival date
+
+cat(paste('base3.3 RMSE:', map2_dbl(hotels3.3, hotel_folds$test, modelr::rmse) %>% mean %>% round(4)))
+#cat(paste('base3.4 (with arrival date) RMSE:', '0.2249'))
+
+#Lasso code SS
+# base3x = model.matrix(children ~ .-1 - arrival_date, data=hoteldev) # do -1 to drop intercept!
+# base3y = hoteldev$children
+# 
+# base3 = cv.gamlr(base3x, base3y, nfold=10, verb=TRUE)
+# 
+# base3.min = coef(base3, select='min') #this is the minimized lasso
+# base3.1se = coef(base3) #we want the simpler model
+# #cat(paste("base3 is a lasso with lambda =", log(base3$lambda.1se) %>% round(4), " and a total of", sum(base3.1se!=0), "coefficients"))
+# #base3.1se
+# cat(paste('base3 RMSE:', sqrt(base3$cvm[base3$seg.1se]) %>% round(4)))
+
+```
 
 
 ### Model validation: step 1
 
-Once you've built your best model and assessed its out-of-sample performance using `hotels_dev`, now turn to the data in `hotels_val`.  Now you'll __validate__ your model using this entirely fresh subset of the data, i.e. one that wasn't used to fit OR test as part of the model-building stage.  (Using a separate "validation" set, completely apart from your training and testing set, is a generally accepted best practice in machine learning.)  
+*Once you've built your best model and assessed its out-of-sample performance using `hotels_dev`, now turn to the data in `hotels_val`.  Now you'll __validate__ your model using this entirely fresh subset of the data, i.e. one that wasn't used to fit OR test as part of the model-building stage.  (Using a separate "validation" set, completely apart from your training and testing set, is a generally accepted best practice in machine learning.) *
 
-Produce an ROC curve for your best model, using the data in `hotels_val`: that is, plot TPR(t) versus FPR(t) as you vary the classification threshold t.  
+*Produce an ROC curve for your best model, using the data in `hotels_val`: that is, plot TPR(t) versus FPR(t) as you vary the classification threshold t.*
+
+See below confusion matrix and ROC curve, where 'Sensitivity' = TPR and Specificity = 1-FPR.
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+#how can I use the model fitted before using cross validation.  Do I need to to use the cadet train function?  The model without cross validation is showing the same RMSE.  So that's promising.
+
+base3.3 = lm(children ~ . - arrival_date + poly(adults, 2) + required_car_parking_spaces:poly(adults, 2) + poly(total_of_special_requests, 2) + reserved_room_type:customer_type + reserved_room_type:average_daily_rate + reserved_room_type:meal + reserved_room_type:stays_in_weekend_nights + reserved_room_type:hotel + hotel:stays_in_weekend_nights, data=hoteldev)
+
+#test accuracy
+#hotelval$arrival_date <- substr(hotelval$arrival_date, 6, 10)
+probhat_val = predict(base3.3, newdata=hotelval)
+yhat_val = ifelse(probhat_val >= 0.5, 1, 0)
+table(y=hotelval$children, yhat=yhat_val)
+
+#
+roc_result = roc(response = hotelval$children, predictor = probhat_val)
+plot(roc_result, main = "ROC Curve")
+
+
+```
+
 
 
 ### Model validation: step 2
 
-Next, create 20 folds of `hotels_val`.  There are 4,999 bookings in `hotels_val`, so each fold will have about 250 bookings in it -- roughly the number of bookings the hotel might have on a single busy weekend.  For each fold:  
+*Next, create 20 folds of `hotels_val`.  There are 4,999 bookings in `hotels_val`, so each fold will have about 250 bookings in it -- roughly the number of bookings the hotel might have on a single busy weekend.  For each fold:* 
 
-1. Predict whether each booking will have children on it.  
-2. Sum up the predicted probabilities for all the bookings in the fold.  This gives an estimate of the expected number of bookings with children for that fold.  
-3. Compare this "expected" number of bookings with children versus the actual number of bookings with children in that fold.
+*1. Predict whether each booking will have children on it.  *
+*2. Sum up the predicted probabilities for all the bookings in the fold.  This gives an estimate of the expected number of bookings with children for that fold.  *
+*3. Compare this "expected" number of bookings with children versus the actual number of bookings with children in that fold.*
 
-How well does your model do at predicting the total number of bookings with children in a group of 250 bookings?  Summarize this performance across all 20 folds of the `val` set in an appropriate figure or table.  
+*How well does your model do at predicting the total number of bookings with children in a group of 250 bookings?  Summarize this performance across all 20 folds of the `val` set in an appropriate figure or table.  *
 
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
+hotel_folds = 20
+
+eval_df <- data.frame(fold = 1:hotel_folds, sum_predictions = numeric(hotel_folds), sum_actual = numeric(hotel_folds))
+
+folds = sample(rep(1:hotel_folds, length.out = nrow(hotelval)))
+    # Iterate through each fold
+for (fold in 1:hotel_folds) {
+    # predict whether each booking will have children in it
+    fold_data = hotelval[folds == fold, ]
+    predictions = predict(base3.3, fold_data)
+    sum_predictions = sum(predictions)
+    eval_df$sum_predictions[fold] <- sum_predictions
+    
+    #add sum for actual amount of children
+    sum_actual = sum(fold_data$children==1)
+    eval_df$sum_actual[fold] <- sum_actual
+    # Calculate RMSE for this fold
+    #sum_predicted = (predictions - test_data["price"])^2
+    #rmse_values[fold] = sqrt(mean(temp$price))
+}
+
+plot1 = ggplot(eval_df, aes(x=sum_predictions, y=sum_actual)) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1, color = "lightblue")+
+  labs(x = "Actual Children", y = "Predicted Children") +
+  scale_x_continuous(limits = c(12, 28)) +   # Set x-axis limits
+  scale_y_continuous(limits = c(12, 28)) +
+  ggtitle("Actual vs Base3.3-predicted Child Totals for k=20 Folds") +
+  theme_minimal()
+
+plot1
+
+
+
 
 ```
 
+Seen above, our model does an pretty awesome job of predicting whether or not there will be children at the booking.  We are often within 5 children off from actual, and we are about as often higher than actual than lower.  This will give the hotel a good idea of how many kiddos to expect.
+
+
 ## Mushroom classification
 
-The data in [mushrooms.csv](../data/mushrooms.csv) correspond to 23 species of gilled mushrooms in the Agaricus and Lepiota Family.  Each species is identified as definitely edible (class = e), definitely poisonous (class = p), or of unknown edibility and not recommended.  (This latter class was combined with the poisonous one.)  There is no simple rule for determining the edibility of a mushroom, analogous to "leaves of three, let it be" for poison ivy.  
+*The data in [mushrooms.csv](../data/mushrooms.csv) correspond to 23 species of gilled mushrooms in the Agaricus and Lepiota Family.  Each species is identified as definitely edible (class = e), definitely poisonous (class = p), or of unknown edibility and not recommended.  (This latter class was combined with the poisonous one.)  There is no simple rule for determining the edibility of a mushroom, analogous to "leaves of three, let it be" for poison ivy.*
 
-The features in the data set are as follows:
+*The features in the data set are as follows [see assignment]*
 
-| Attribute Name               | Description                                                                 |
-|------------------------------|-----------------------------------------------------------------------------|
-| cap-shape                    | bell=b, conical=c, convex=x, flat=f, knobbed=k, sunken=s                    |
-| cap-surface                  | fibrous=f, grooves=g, scaly=y, smooth=s                                     |
-| cap-color                    | brown=n, buff=b, cinnamon=c, gray=g, green=r, pink=p, purple=u, red=e, white=w, yellow=y |
-| bruises                      | bruises=t, no=f                                                             |
-| odor                         | almond=a, anise=l, creosote=c, fishy=y, foul=f, musty=m, none=n, pungent=p, spicy=s |
-| gill-attachment              | attached=a, descending=d, free=f, notched=n                                 |
-| gill-spacing                 | close=c, crowded=w, distant=d                                               |
-| gill-size                    | broad=b, narrow=n                                                           |
-| gill-color                   | black=k, brown=n, buff=b, chocolate=h, gray=g, green=r, orange=o, pink=p, purple=u, red=e, white=w, yellow=y |
-| stalk-shape                  | enlarging=e, tapering=t                                                     |
-| stalk-root                   | bulbous=b, club=c, cup=u, equal=e, rhizomorphs=z, rooted=r, missing=?       |
-| stalk-surface-above-ring     | fibrous=f, scaly=y, silky=k, smooth=s                                       |
-| stalk-surface-below-ring     | fibrous=f, scaly=y, silky=k, smooth=s                                       |
-| stalk-color-above-ring       | brown=n, buff=b, cinnamon=c, gray=g, orange=o, pink=p, red=e, white=w, yellow=y |
-| stalk-color-below-ring       | brown=n, buff=b, cinnamon=c, gray=g, orange=o, pink=p, red=e, white=w, yellow=y |
-| veil-type                    | partial=p, universal=u                                                      |
-| veil-color                   | brown=n, orange=o, white=w, yellow=y                                        |
-| ring-number                  | none=n, one=o, two=t                                                        |
-| ring-type                    | cobwebby=c, evanescent=e, flaring=f, large=l, none=n, pendant=p, sheathing=s, zone=z |
-| spore-print-color            | black=k, brown=n, buff=b, chocolate=h, green=r, orange=o, purple=u, white=w, yellow=y |
-| population                   | abundant=a, clustered=c, numerous=n, scattered=s, several=v, solitary=y     |
-| habitat                      | grasses=g, leaves=l, meadows=m, paths=p, urban=u, waste=w, woods=d          |
+*So you can see that all of the variables are categorical, sometimes with more than 2 levels.*
 
+*Can you predict whether a mushroom is poisonous using machine learning?  Write a short report on the best-performing model you can find using lasso-penalized logistic regression.  Evaluate the out-of-sample performance of your model using a ROC curve.  Based on this ROC curve, recommend a probability threshold for declaring a mushroom poisonous.  How well does your model perform at this threshold, as measured by false positive rate and true positive rate?*
 
-So you can see that all of the variables are categorical, sometimes with more than 2 levels.
-
-Can you predict whether a mushroom is poisonous using machine learning?  Write a short report on the best-performing model you can find using lasso-penalized logistic regression.  Evaluate the out-of-sample performance of your model using a ROC curve.  Based on this ROC curve, recommend a probability threshold for declaring a mushroom poisonous.  How well does your model perform at this threshold, as measured by false positive rate and true positive rate?  
 
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
 
@@ -323,7 +380,8 @@ Can you predict whether a mushroom is poisonous using machine learning?  Write a
 mushrooms = read.csv("./data/mushrooms.csv")
 
 # Removing columns that would have factors with less than 2 levels
-mushrooms = mushrooms[sapply(mushrooms, function(x) length(unique(x)) > 1)]
+mushrooms <- mushrooms %>%
+  select_if(~n_distinct(.) > 1)
 
 # Convert all categorical variables to factors
 mushrooms = mushrooms %>% mutate_if(is.character, as.factor)
@@ -350,31 +408,43 @@ cv_fit = cv.glmnet(x_train, y_train, family = "binomial", alpha = 1)
 plot(cv_fit)
 
 # Print the minimum lambda value used
-print(cv_fit$lambda.min)
+cat("Ideal Lambda:", cv_fit$lambda.min)
 
-# Using the lasso-penalized logistic regression model, we get the graph depicted above showing the relationship between log lambda and binomial deviance. The lambda that minimizes deviance is approximately 0.0001444448. We can use this value to evaluate the out-of-sample performance of your model through a ROC curve. 
+```
+
+Using the lasso-penalized logistic regression model, we get the graph depicted above which shows the relationship between log lambda and binomial deviance. The lambda that minimizes deviance is approximately 0.0001444448. We can use this value to evaluate the out-of-sample performance of our model through a ROC curve. 
+
+``` {r, message=FALSE, echo=FALSE, warning=FALSE}
 
 # Predict on the test set
 # Here we extract the probabilities for the class of interest (which is the second column of the predict matrix)
 predictions = predict(cv_fit, newx = x_test, s = "lambda.min", type = "response")[,1]
 
 # Generate the ROC curve
+# I tried to plot the ROC through a more manual method by going sequencing through each of the thresholds and found the tpr and fpr of each threshold using a for loop and still got the same shape for the ROC curve so I used the ROC function for simplicity.
+
 roc_result = roc(response = y_test, predictor = predictions)
 plot(roc_result, main = "ROC Curve")
 
-# The ROC curve in this case is not exactly a curve but rather 2 perpendicular lines that intersect at (1,1). This means that the is high sensitivity and high specificity and thus is effective at distinguishing between the two classes (poisonous and non-poisonous mushrooms).
+```
+
+ 
+In this case, the ROC curve does not resemble the typical curve but rather mirrors the shape of a right triangle. This sort of configuration indicates that the lasso-penalized logistic regression model has exceptional classification accuracy. This is because a right triangle shape suggests a model characterized by both high sensitivity and high specificity.
+
+``` {r, message=FALSE, echo=FALSE, warning=FALSE}
 
 # Find the optimal threshold
 coords(roc_result, "best", ret = c("threshold", "sensitivity", "specificity"))
-
-
 
 best_coords = coords(roc_result, "best", ret = c("specificity", "sensitivity"))
 fpr = 1 - best_coords["specificity"]
 tpr = best_coords["sensitivity"]
 
-list(FPR = fpr, TPR = tpr)
+cat(paste("FPR", fpr ), "\n")
+cat(paste("TPR", tpr ), "\n") 
 
-# Based on the ROC curve I would recommend a probability threshold of 0.5017094. Since our false positive rate of 0 and a true positive of 1, it is safe to say that our model performs exceptionally well at this threshold. 
 
 ```
+
+Based on the ROC curve I would recommend a probability threshold of 0.5017094. Since we have a false positive rate of 0 and a true positive of 1, it is safe to say that our model performs exceptionally well at this threshold. To be certain that this exceptional performance is not a product of overfitting, we could test our model on an external dataset to see if it performs similarly. In conclusion, we are able to predict that poisonous mushrooms ARE INDEED poisonous 100% of the time.
+

@@ -3,7 +3,7 @@ title: 'ECO 395M: StatLearning Exercise 1'
 author: "Joseph Williams, Aahil Navroz, Suqian Qi"
 date: "`r Sys.Date()`"
 output: 
-#  html_document: default
+  html_document: default
   md_document:
 
 ---
@@ -17,9 +17,6 @@ library(rsample)
 library(caret)
 library(glmnet) 
 library(pROC)
-
-
-
 ```
 
 ## Saratoga house prices
@@ -85,23 +82,51 @@ The problem here is that we are conditioning on defaulted loans and thus creatin
 ```
 ## Children and hotel reservations
 
-The files `hotels_dev.csv` and `hotels_val.csv` contains data on tens of thousands of hotel stays from a major U.S.-based hotel chain.  The goal of this problem is simple: to build a predictive model for whether a hotel booking will have children on it.  
+*The files `hotels_dev.csv` and `hotels_val.csv` contains data on tens of thousands of hotel stays from a major U.S.-based hotel chain.  The goal of this problem is simple: to build a predictive model for whether a hotel booking will have children on it. This is an excellent use case for an ML model: a piece of software that can scan the bookings for the week ahead and produce an estimate for how likely each one is to have a "hidden" child on it.*
 
-Why would that be important?  For an equally simple reason: when booking a hotel stay on a website, parents often enter the reservation exclusively for themselves and forget to include their children on the form.  Obviously, the hotel isn't going to turn parents away from their room if they neglected to mention that their children would be staying with them.  But __not__ knowing about those children does, at least in the aggregate, prevent the hotel from making accurate forecasts of resource utilization.   So if, for example, you could use the _other_ features associated with a booking to forecast that a bunch of kids were going to show up unannounced, you might know to order more chicken nuggets for the restaurant and less tequila for the bar.  (Or maybe more tequila, depending on how frazzled the parents who stay at your hotel tend to be.)  In any event, as a hotel operator, if you can forecast the arrival of those kids a bit better, you can  be just a bit more efficient, operationally speaking.  This is an excellent use case for an ML model: a piece of software that can scan the bookings for the week ahead and produce an estimate for how likely each one is to have a "hidden" child on it.  
-
-The target variable of interest is `children`: a dummy variable for whether the booking has children on it.  All other variables in the data set can be used to predict the `children` variable, and the names are pretty self-explanatory. 
 
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
-
+hoteldev = read.csv('./data/hotels_dev.csv')
+hotelval = read_csv('./data/hotels_val.csv')
 ```
 
 
 ### Model building
 
-Using only the data in `hotels.dev.csv`, please compare the out-of-sample performance of the following models:  
+*Using only the data in `hotels.dev.csv`, please compare the out-of-sample performance of the following models:*
 
-1. baseline 1: a small model that uses only the `market_segment`, `adults`, `customer_type`, and `is_repeated_guest` variables as features.   
+1. baseline 1: a small model that uses only the `market_segment`, `adults`, `customer_type`, and `is_repeated_guest` variables as features.
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+
+#Look up traincontrol
+#When measuring out-of-sample performance,average the estimate of out-of-sample RMSE over many different random train/test splits, or using cross-validation.
+
+# hotel_split = initial_split(hoteldev, prop = 0.8)
+# hotel_train = training(hotel_split)
+# hotel_test = testing(hotel_split)
+
+#base1 = glm(children ~ market_segment + customer_type + is_repeated_guest, data=hotel_train, family='binomial')
+
+#Train and cross validate, same step
+base1 = train(
+  form = children ~ market_segment + customer_type + is_repeated_guest,
+  data = hoteldev,
+  trControl = trainControl(method = "cv", number = 10),
+  method = "glm",
+  family = "binomial"
+)
+
+print(paste("base1 RMSE:", base1$results$RMSE %>% round(4)))
+
+# Access coefficients from the model object
+print(paste("base1 coefficients:", coef(base1$finalModel) %>% round(2)))
+
+```
+
 2. baseline 2: a big model that uses all the possible predictors _except_ the `arrival_date` variable (main effects only).  
+
+
 3. the best linear model you can build, including any engineered features that you can think of that improve the performance (interactions, features derived from time stamps, etc).  
 
 Use the `hotels_dev.csv` file for your __entire__ model building and testing pipeline.  That is, you'll create your train/test splits using `hotels_dev` only, and not testing at all on `hotels_val`.  Everything in `hotels_val` should be held back for the next part of this exercise.

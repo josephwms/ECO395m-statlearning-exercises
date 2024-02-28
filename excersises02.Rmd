@@ -362,7 +362,11 @@ plot(cv_fit)
 # Print the minimum lambda value used
 print(cv_fit$lambda.min)
 
-# Using the lasso-penalized logistic regression model, we get the graph depicted above which shows the relationship between log lambda and binomial deviance. The lambda that minimizes deviance is approximately 0.0001444448. We can use this value to evaluate the out-of-sample performance of your model through a ROC curve. 
+```
+
+Using the lasso-penalized logistic regression model, we get the graph depicted above which shows the relationship between log lambda and binomial deviance. The lambda that minimizes deviance is approximately 0.0001444448. We can use this value to evaluate the out-of-sample performance of your model through a ROC curve. 
+
+``` {r, message=FALSE, echo=FALSE, warning=FALSE}
 
 # Predict on the test set
 # Here we extract the probabilities for the class of interest (which is the second column of the predict matrix)
@@ -371,8 +375,13 @@ predictions = predict(cv_fit, newx = x_test, s = "lambda.min", type = "response"
 # Generate the ROC curve
 roc_result = roc(response = y_test, predictor = predictions)
 plot(roc_result, main = "ROC Curve")
+
+```
+
  
-# In this case, the ROC curve does not resemble the typical curve but rather mirrors the shape of a right triangle. This sort of configuration indicates that the lasso-penalized logistic regression model has exceptional classification accuracy. This is because a right triangle shape suggests a model characterized by both high sensitivity and high specificity.
+In this case, the ROC curve does not resemble the typical curve but rather mirrors the shape of a right triangle. This sort of configuration indicates that the lasso-penalized logistic regression model has exceptional classification accuracy. This is because a right triangle shape suggests a model characterized by both high sensitivity and high specificity.
+
+``` {r, message=FALSE, echo=FALSE, warning=FALSE}
 
 # Find the optimal threshold
 coords(roc_result, "best", ret = c("threshold", "sensitivity", "specificity"))
@@ -382,13 +391,12 @@ fpr = 1 - best_coords["specificity"]
 tpr = best_coords["sensitivity"]
 
 cat(paste("FPR", fpr ), "\n")
-cat(paste("TPR", tpr ), "\n")
-
-# Based on the ROC curve I would recommend a probability threshold of 0.5017094. Since we have a false positive rate of 0 and a true positive of 1, it is safe to say that our model performs exceptionally well at this threshold. In conclusion, we are indeed able to predict whether a mushroom is poisonous or not by using machine learning. 
+cat(paste("TPR", tpr ), "\n") 
 
 
 ```
 
+Based on the ROC curve I would recommend a probability threshold of 0.5017094. Since we have a false positive rate of 0 and a true positive of 1, it is safe to say that our model performs exceptionally well at this threshold. We are indeed able to predict whether a mushroom is poisonous or not by using machine learning. However, we still need to be careful because this may be a case of overfitting. To be certain that this exceptional performance is not a product of overfitting, we could test our model on an external dataset that was not used during the training or validation process to see if it  performs similarly.
 
 
 

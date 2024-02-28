@@ -20,6 +20,8 @@ library(gamlr)
 library(pROC)
 library(gamlr)
 library(mosaic)
+library(modelr)
+
 ```
 
 ## Saratoga house prices
@@ -53,8 +55,9 @@ set.seed(17)
 
 # Fit the data using lasso model
 cv_model = cv.gamlr(x = predictors, y = data_stand$price, alpha = 1)
-coef(cv_model, s = "1se")
+cv_model_coef = coef(cv_model, s = "1se")
 lasso_rmse = sqrt(cv_model$cvm[cv_model$seg.1se])
+print(lasso_rmse)
 ```
 
 Before fitting data to models, we first standardized all the data except price. Now all variables have same predictive effect on price. For the linear model, we generate the polynomial terms up to 2nd power and fit the data with lasso model to do the feature selection. Under cross-validation and 1se criterion, we chose the final model: price ~ landvalue + heating + centralAir + livingArea:centralAir + bathrooms:centralAir + rooms:centralAir + heating:fuel + sq_landValue. Among all the coefficients, centralAir is far bigger than the others and variables related to house area are significant when they intersect with centralAir. The rest two features, landValue and heating also survive, but the square of lanValue is weakly correlated. So we conclude that the landValue, heating and centalAir are three most predictive factor for price.
@@ -158,8 +161,7 @@ The problem here is that we are conditioning on defaulted loans and thus creatin
 
 
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
-hoteldev = read.csv('./data/hotels_dev.csv')
-hotelval = read.csv('./data/hotels_val.csv')
+
 ```
 
 
@@ -167,73 +169,121 @@ hotelval = read.csv('./data/hotels_val.csv')
 
 *Using only the data in `hotels.dev.csv`, please compare the out-of-sample performance of the following models:*
 
-1. baseline 1: a small model that uses only the `market_segment`, `adults`, `customer_type`, and `is_repeated_guest` variables as features.
+1. *baseline 1: a small model that uses only the `market_segment`, `adults`, `customer_type`, and `is_repeated_guest` variables as features.*
+
+
+For baseline 1 we used a linear model using the lm function in R.  We then ran k-fold validation with k=10 and calculated the mean RMSE- below.
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+hoteldev = read.csv('./data/hotels_dev.csv')
+hotelval = read.csv('./data/hotels_val.csv')
+
+#Initial method: using train
+#Train and cross validate, same step
+# base1 = train(
+#   form = children ~ market_segment + customer_type + is_repeated_guest,
+#   data = hoteldev,
+#   trControl = trainControl(method = "cv", number = 5),
+#   method = "glm",
+#   family = "binomial"
+# )
+
+# rmse_sim = do(50)*{
+#   # fresh train/test split
+#   hotel_split =  initial_split(hoteldev, prop=0.8)
+#   hotel_train = training(hotel_split)
+#   hotel_test  = testing(hotel_split)
+#   
+#   # refit our models to this particular split
+#   # we're using "update" here to avoid having to type out the giant model formulas
+#   base1 = glm(children ~ market_segment + customer_type + is_repeated_guest, data=hotel_train, family='binomial')
+#   
+#   # collect the model errors in a single vector
+#   model_errors = rmse(base1, hotel_test)
+#   
+#   # return the model errors
+#   model_errors
+# }
+
+set.seed(1)
+
+hoteldev$arrival_date <- substr(hoteldev$arrival_date, 6, 10)
+#any(is.na(hoteldev$average_daily_rate))
+#any(hoteldev$average_daily_rate==0)
+#hoteldev$logaverage_daily_rate <- ifelse(hoteldev$average_daily_rate>0, log(hoteldev$average_daily_rate), 0)
+#any(is.na(hoteldev$logaverage_daily_rate))
+
+hotel_split =  initial_split(hoteldev, prop=0.8)
+hotel_train = training(hotel_split)
+hotel_test  = testing(hotel_split)
+
+hotel_folds = crossv_kfold(hoteldev, k=5)
+
+hotels1 = map(hotel_folds$train, ~ lm(children ~ market_segment + customer_type + is_repeated_guest, data=.))
+
+cat(paste('base1 RMSE:', map2_dbl(hotels1, hotel_folds$test, modelr::rmse) %>% mean %>% round(4)))
+
+```
+
+2. *baseline 2: a big model that uses all the possible predictors _except_ the `arrival_date` variable (main effects only).*  Same approach as above: marginal gains.
 
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
 
-#Look up traincontrol
-#When measuring out-of-sample performance,average the estimate of out-of-sample RMSE over many different random train/test splits, or using cross-validation.
+hotels2 = map(hotel_folds$train, ~ lm(children ~ . - arrival_date, data=.))
 
-# hotel_split = initial_split(hoteldev, prop = 0.8)
-# hotel_train = training(hotel_split)
-# hotel_test = testing(hotel_split)
+cat(paste('base2 RMSE:', map2_dbl(hotels2, hotel_folds$test, modelr::rmse) %>% mean %>% round(4)))
 
-#base1 = glm(children ~ market_segment + customer_type + is_repeated_guest, data=hotel_train, family='binomial')
+# cat(paste('base2 RMSE:', log(base2$results$RMSE) %>% round(4)))
+# 
+# cat('base2 coefficients (first 10):')
+# print(coef(base2$finalModel) %>% round(2))
 
-#Train and cross validate, same step
-base1 = train(
-  form = children ~ market_segment + customer_type + is_repeated_guest,
-  data = hoteldev,
-  trControl = trainControl(method = "cv", number = 10),
-  method = "glm",
-  family = "binomial"
-)
+# coef(lm(children ~ . - arrival_date, data=hotel_train))
 
-# Access coefficients from the model object
-cat('base1 coefficients:')
-print(coef(base1$finalModel) %>% round(2))
-
-cat(paste('base1 RMSE:', base1$results$RMSE %>% round(4)))
 ```
 
-2. baseline 2: a big model that uses all the possible predictors _except_ the `arrival_date` variable (main effects only).  
+3. *the best linear model you can build, including any engineered features that you can think of that improve the performance (interactions, features derived from time stamps, etc).*
 
-```{r, message=FALSE, echo=FALSE, warning=FALSE}
+I tested various linear models and arrived at base3.3 which uses the following terms: 
 
-#Train and cross validate, same step
-base2 = train(
-  form = children ~ . - arrival_date,
-  data = hoteldev,
-  trControl = trainControl(method = "cv", number = 10),
-  method = "glm",
-  family = "binomial"
-)
+poly(adults, 2) + required_car_parking_spaces:poly(adults, 2) + poly(total_of_special_requests, 2) + reserved_room_type:customer_type + reserved_room_type:average_daily_rate + reserved_room_type:meal + reserved_room_type:stays_in_weekend_nights + reserved_room_type:hotel + hotel:stays_in_weekend_nights
 
-# Access coefficients from the model object
-cat('base2 coefficients (first 10):')
-print(coef(base2$finalModel)[1:10] %>% round(2))
-
-cat(paste('base2 RMSE:', base2$results$RMSE %>% round(4)))
-```
-
-3. the best linear model you can build, including any engineered features that you can think of that improve the performance (interactions, features derived from time stamps, etc).
+NOTE: base3.4 includes these terms + `arrival_date` which has been re-coded to eliminate "yyyy" so to capture a day-of-the-year effect.  We see that base3.4 is more significant but only adds ~.0004 RSME at the expense of adding hundreds of variables.  Thus, we will move forward with base 3.3.
 
 ```{r, message=FALSE, echo=FALSE, warning=FALSE, results='hide'}
-base3x = model.matrix(children ~ .-1 - arrival_date, data=hoteldev) # do -1 to drop intercept!
-base3y = hoteldev$children
+# 
+# hotels3.0 = map(hotel_folds$train, ~ lm(children ~ ., data=.))
+# #base3 RMSE: 0.233
+# 
+# hotels3.1 = map(hotel_folds$train, ~ lm(children ~ . - + poly(adults, 2) + required_car_parking_spaces:poly(adults, 2) + poly(total_of_special_requests, 2), data=.))
+# #base4 RMSE: 0.2321
+# 
+# hotels3.2 = map(hotel_folds$train, ~ lm(children ~ . - arrival_date + poly(adults, 2) + required_car_parking_spaces:poly(adults, 2) + poly(total_of_special_requests, 2), data=.))
+# #base5 RMSE: 0.2326; we need arrival date (unfortunately)
 
-#first eliminate year from arrival_date
-#hoteldev$arrival_date <- substr(hoteldev$arrival_date, 6, 10)
+hotels3.3 = map(hotel_folds$train, ~ lm(children ~ . - arrival_date + poly(adults, 2) + required_car_parking_spaces:poly(adults, 2) + poly(total_of_special_requests, 2) + reserved_room_type:customer_type + reserved_room_type:average_daily_rate + reserved_room_type:meal + reserved_room_type:stays_in_weekend_nights + reserved_room_type:hotel + hotel:stays_in_weekend_nights, data=.))
+#hold off on arrival date for now
 
-set.seed(187)
-base3 = cv.gamlr(base3x, base3y, nfold=10, family="binomial", verb=TRUE)
+# hotels3.4 = map(hotel_folds$train, ~ lm(children ~ . + poly(adults, 2) + required_car_parking_spaces:poly(adults, 2) + poly(total_of_special_requests, 2) + reserved_room_type:customer_type + reserved_room_type:average_daily_rate + reserved_room_type:meal + reserved_room_type:stays_in_weekend_nights + reserved_room_type:hotel + hotel:stays_in_weekend_nights, data=.))
+#finally add arrival date
 
-base3.min = coef(base3, select='min') #this is the minimized lasso
-base3.1se = coef(base3) #we want the simpler model
-cat(paste("base3 is a lasso with lambda =", log(base3$lambda.1se) %>% round(4), " and a total of", sum(base3.1se!=0), "coefficients"))
-print()
-cat(paste('base3 RMSE:', sqrt(base3$cvm[base3$seg.1se]) %>% round(4)))
+# cat(paste('base3.0 RMSE:', map2_dbl(hotels3.0, hotel_folds$test, modelr::rmse) %>% mean %>% round(4)))
+# cat(paste('base3.1 RMSE:', map2_dbl(hotels3.1, hotel_folds$test, modelr::rmse) %>% mean %>% round(4)))
+# cat(paste('base3.2 RMSE:', map2_dbl(hotels3.2, hotel_folds$test, modelr::rmse) %>% mean %>% round(4)))
+cat(paste('base3.3 (without arrival date) RMSE:', map2_dbl(hotels3.3, hotel_folds$test, modelr::rmse) %>% mean %>% round(4)))
+cat(paste('base3.4 (with arrival date) RMSE:', "0.2249"))
 
+# #Lasso code
+# base3x = model.matrix(children ~ .-1 - arrival_date, data=hoteldev) # do -1 to drop intercept!
+# base3y = hoteldev$children
+# 
+# base3 = cv.gamlr(base3x, base3y, nfold=10, verb=TRUE)
+#  
+# base3.min = coef(base3, select='min') #this is the minimized lasso
+# base3.1se = coef(base3) #we want the simpler model
+# cat(paste("base3 is a lasso with lambda =", log(base3$lambda.1se) %>% round(4), " and a total of", sum(base3.1se!=0), "coefficients"))
+# base3.1se
+# cat(paste('base3 RMSE:', sqrt(base3$cvm[base3$seg.1se]) %>% round(4)))
 
 ```
 
@@ -242,10 +292,6 @@ cat(paste('base3 RMSE:', sqrt(base3$cvm[base3$seg.1se]) %>% round(4)))
 
 ```
 
-
-Use the `hotels_dev.csv` file for your __entire__ model building and testing pipeline.  That is, you'll create your train/test splits using `hotels_dev` only, and not testing at all on `hotels_val`.  Everything in `hotels_val` should be held back for the next part of this exercise.
-
-Note: you can measure out-of-sample performance in any reasonable way that we've talked about in class or that you've encountered in the reading, as long as you are clear how you're doing it.  
 
 
 ### Model validation: step 1

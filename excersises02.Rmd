@@ -28,12 +28,8 @@ library(modelr)
 
 Return to the data set on house prices in Saratoga, NY that we considered in class.  Recall that a starter script here is in `saratoga_lm.R`.  For this data set, you'll run a "horse race" (i.e. a model comparison exercise) between two model classes: linear models and KNN.  
 
-- Build the best linear model for price that you can.  It should clearly outperform the "medium" model that we considered in class.  Use any combination of transformations, engineering features, polynomial terms, and interactions that you want; and use any strategy for selecting the model that you want.  
-- Now build the best K-nearest-neighbor regression model for price that you can.  Note: you still need to choose which features should go into a KNN model, but you don't explicitly include interactions or polynomial terms.  The method is sufficiently adaptable to find interactions and nonlinearities, if they are there.   But do make sure to _standardize_ your variables before applying KNN, or at least do something that accounts for the large differences in scale across the different variables here.  
-
-Which model seems to do better at achieving lower out-of-sample mean-squared error?   Write a report on your findings as if you were describing your price-modeling strategies for a local taxing authority, who needs to form predicted market values for properties in order to know how much to tax them.  Keep the main focus on the conclusions and model performance; any relevant technical details should be put in an appendix.  
-
-Note: When measuring out-of-sample performance, there is _random variation_ due to the particular choice of data points that end up in your train/test split.  Make sure your script addresses this by averaging the estimate of out-of-sample RMSE over many different random train/test splits, either randomly or by cross-validation.
+*- Build the best linear model for price that you can.  It should clearly outperform the "medium" model that we considered in class.  Use any combination of transformations, engineering features, polynomial terms, and interactions that you want; and use any strategy for selecting the model that you want. * 
+*- Now build the best K-nearest-neighbor regression model for price that you can.  Note: you still need to choose which features should go into a KNN model, but you don't explicitly include interactions or polynomial terms.  The method is sufficiently adaptable to find interactions and nonlinearities, if they are there.   But do make sure to _standardize_ your variables before applying KNN, or at least do something that accounts for the large differences in scale across the different variables here.*
 
 
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
@@ -110,6 +106,8 @@ optimal_k = rmse_result[which.min(rmse_result$avg_rmse), ]$k
 knn_rmse = rmse_result[optimal_k/2,]$avg_rmse
 ```
 
+*Which model seems to do better at achieving lower out-of-sample mean-squared error?   Write a report on your findings as if you were describing your price-modeling strategies for a local taxing authority, who needs to form predicted market values for properties in order to know how much to tax them.  Keep the main focus on the conclusions and model performance; any relevant technical details should be put in an appendix.*
+
 For the KNN model, we use lasso model to do the feature selection for us. We assuming that features that are more important in Lasso also make sense in KNN model. We choose landValue, livingArea, bathrooms, waterfront and centralAir to fit the KNN model. Under CV, we choose the optimal k equal to 22. As a result, the RMSE for lasso model in part 1 is 82860.643 and for KNN model is 59689.196. SO KNN model performs better in out-of-sample RMSE. All the RMSE here are the average RMSE under cross-validation. 
 
 ## Classification and retrospective sampling
@@ -147,22 +145,11 @@ In this visualization we see higher predicted probabilities of default for indiv
 
 The problem here is that we are conditioning on defaulted loans and thus creating a biased sample.  The matching loans associated with `history` == "good" may have other characteristics which are not as often associated with default, and so our model may distiguish `historygood` as the feature which best explains variation in `Default`.  For this reason, this data set is inappropriate for building a model to screen prospective borrowers for default risk.  Random sampling would eliminate this issue because there would be a much larger number of loans with `historygood` == 1 & `Default` == 0, and so other, less-biased relationships might emerge.
 
-```{r, message=FALSE, echo=FALSE, warning=FALSE}
-
-```
 
 
-```{r, message=FALSE, echo=FALSE, warning=FALSE}
-
-```
 ## Children and hotel reservations
 
 *The files `hotels_dev.csv` and `hotels_val.csv` contains data on tens of thousands of hotel stays from a major U.S.-based hotel chain.  The goal of this problem is simple: to build a predictive model for whether a hotel booking will have children on it. This is an excellent use case for an ML model: a piece of software that can scan the bookings for the week ahead and produce an estimate for how likely each one is to have a "hidden" child on it.*
-
-
-```{r, message=FALSE, echo=FALSE, warning=FALSE}
-
-```
 
 
 ### Model building
@@ -172,60 +159,27 @@ The problem here is that we are conditioning on defaulted loans and thus creatin
 1. *baseline 1: a small model that uses only the `market_segment`, `adults`, `customer_type`, and `is_repeated_guest` variables as features.*
 
 
-For baseline 1 we used a linear model using the lm function in R.  We then ran k-fold validation with k=10 and calculated the mean RMSE- below.
+For baseline 1 we used a linear model using the lm function in R.  We then ran k-fold validation with k=10 and calculated the mean RMSE [below].
 
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
 hoteldev = read.csv('./data/hotels_dev.csv')
 hotelval = read.csv('./data/hotels_val.csv')
 
-#Initial method: using train
-#Train and cross validate, same step
-# base1 = train(
-#   form = children ~ market_segment + customer_type + is_repeated_guest,
-#   data = hoteldev,
-#   trControl = trainControl(method = "cv", number = 5),
-#   method = "glm",
-#   family = "binomial"
-# )
-
-# rmse_sim = do(50)*{
-#   # fresh train/test split
-#   hotel_split =  initial_split(hoteldev, prop=0.8)
-#   hotel_train = training(hotel_split)
-#   hotel_test  = testing(hotel_split)
-#   
-#   # refit our models to this particular split
-#   # we're using "update" here to avoid having to type out the giant model formulas
-#   base1 = glm(children ~ market_segment + customer_type + is_repeated_guest, data=hotel_train, family='binomial')
-#   
-#   # collect the model errors in a single vector
-#   model_errors = rmse(base1, hotel_test)
-#   
-#   # return the model errors
-#   model_errors
-# }
-
 set.seed(1)
 
 hoteldev$arrival_date <- substr(hoteldev$arrival_date, 6, 10)
-#any(is.na(hoteldev$average_daily_rate))
-#any(hoteldev$average_daily_rate==0)
-#hoteldev$logaverage_daily_rate <- ifelse(hoteldev$average_daily_rate>0, log(hoteldev$average_daily_rate), 0)
-#any(is.na(hoteldev$logaverage_daily_rate))
 
-hotel_split =  initial_split(hoteldev, prop=0.8)
-hotel_train = training(hotel_split)
-hotel_test  = testing(hotel_split)
-
-hotel_folds = crossv_kfold(hoteldev, k=5)
+hotel_folds = crossv_kfold(hoteldev, k=10)
 
 hotels1 = map(hotel_folds$train, ~ lm(children ~ market_segment + customer_type + is_repeated_guest, data=.))
+#hotels1.1 = map(hotel_folds$train, ~ glm(children ~ market_segment + customer_type + is_repeated_guest, data=., family='binomial'))
 
 cat(paste('base1 RMSE:', map2_dbl(hotels1, hotel_folds$test, modelr::rmse) %>% mean %>% round(4)))
+#cat(paste('base1.1 RMSE:', map2_dbl(hotels1.1, hotel_folds$test, modelr::rmse) %>% mean %>% round(4)))
 
 ```
 
-2. *baseline 2: a big model that uses all the possible predictors _except_ the `arrival_date` variable (main effects only).*  Same approach as above: marginal gains.
+2. *baseline 2: a big model that uses all the possible predictors _except_ the `arrival_date` variable (main effects only).*  Same approach as [above] with marginal gains.
 
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
 
@@ -233,33 +187,25 @@ hotels2 = map(hotel_folds$train, ~ lm(children ~ . - arrival_date, data=.))
 
 cat(paste('base2 RMSE:', map2_dbl(hotels2, hotel_folds$test, modelr::rmse) %>% mean %>% round(4)))
 
-# cat(paste('base2 RMSE:', log(base2$results$RMSE) %>% round(4)))
-# 
-# cat('base2 coefficients (first 10):')
-# print(coef(base2$finalModel) %>% round(2))
-
-# coef(lm(children ~ . - arrival_date, data=hotel_train))
-
 ```
 
 3. *the best linear model you can build, including any engineered features that you can think of that improve the performance (interactions, features derived from time stamps, etc).*
 
-I tested various linear models and arrived at base3.3 which uses the following terms: 
+I tested various linear models and arrived at base3.3 which is base2 with the following additional terms: 
 
-poly(adults, 2) + required_car_parking_spaces:poly(adults, 2) + poly(total_of_special_requests, 2) + reserved_room_type:customer_type + reserved_room_type:average_daily_rate + reserved_room_type:meal + reserved_room_type:stays_in_weekend_nights + reserved_room_type:hotel + hotel:stays_in_weekend_nights
+- `poly(adults, 2)`
+- `poly(total_of_special_requests, 2)`
+- `required_car_parking_spaces:poly(adults, 2)`
+- `reserved_room_type:customer_type`
+- `reserved_room_type:average_daily_rate`
+- `reserved_room_type:meal`
+- `reserved_room_type:stays_in_weekend_nights`
+- `reserved_room_type:hotel`
+- `hotel:stays_in_weekend_nights`
 
-NOTE: base3.4 includes these terms + `arrival_date` which has been re-coded to eliminate "yyyy" so to capture a day-of-the-year effect.  We see that base3.4 is more significant but only adds ~.0004 RSME at the expense of adding hundreds of variables.  Thus, we will move forward with base 3.3.
+NOTE: base3.4 includes these terms + `arrival_date` which has been re-coded to eliminate "yyyy" so to capture a day-of-the-year effect.  We see that base3.4 is more significant but only improves RSME by a fraction of percentage at the expense of adding hundreds of variables.  Thus, we will move forward with base 3.3.
 
-```{r, message=FALSE, echo=FALSE, warning=FALSE, results='hide'}
-# 
-# hotels3.0 = map(hotel_folds$train, ~ lm(children ~ ., data=.))
-# #base3 RMSE: 0.233
-# 
-# hotels3.1 = map(hotel_folds$train, ~ lm(children ~ . - + poly(adults, 2) + required_car_parking_spaces:poly(adults, 2) + poly(total_of_special_requests, 2), data=.))
-# #base4 RMSE: 0.2321
-# 
-# hotels3.2 = map(hotel_folds$train, ~ lm(children ~ . - arrival_date + poly(adults, 2) + required_car_parking_spaces:poly(adults, 2) + poly(total_of_special_requests, 2), data=.))
-# #base5 RMSE: 0.2326; we need arrival date (unfortunately)
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
 
 hotels3.3 = map(hotel_folds$train, ~ lm(children ~ . - arrival_date + poly(adults, 2) + required_car_parking_spaces:poly(adults, 2) + poly(total_of_special_requests, 2) + reserved_room_type:customer_type + reserved_room_type:average_daily_rate + reserved_room_type:meal + reserved_room_type:stays_in_weekend_nights + reserved_room_type:hotel + hotel:stays_in_weekend_nights, data=.))
 #hold off on arrival date for now
@@ -267,38 +213,50 @@ hotels3.3 = map(hotel_folds$train, ~ lm(children ~ . - arrival_date + poly(adult
 # hotels3.4 = map(hotel_folds$train, ~ lm(children ~ . + poly(adults, 2) + required_car_parking_spaces:poly(adults, 2) + poly(total_of_special_requests, 2) + reserved_room_type:customer_type + reserved_room_type:average_daily_rate + reserved_room_type:meal + reserved_room_type:stays_in_weekend_nights + reserved_room_type:hotel + hotel:stays_in_weekend_nights, data=.))
 #finally add arrival date
 
-# cat(paste('base3.0 RMSE:', map2_dbl(hotels3.0, hotel_folds$test, modelr::rmse) %>% mean %>% round(4)))
-# cat(paste('base3.1 RMSE:', map2_dbl(hotels3.1, hotel_folds$test, modelr::rmse) %>% mean %>% round(4)))
-# cat(paste('base3.2 RMSE:', map2_dbl(hotels3.2, hotel_folds$test, modelr::rmse) %>% mean %>% round(4)))
 cat(paste('base3.3 (without arrival date) RMSE:', map2_dbl(hotels3.3, hotel_folds$test, modelr::rmse) %>% mean %>% round(4)))
-cat(paste('base3.4 (with arrival date) RMSE:', "0.2249"))
+#cat(paste('base3.4 (with arrival date) RMSE:', '0.2249'))
 
-# #Lasso code
+#Lasso code SS
 # base3x = model.matrix(children ~ .-1 - arrival_date, data=hoteldev) # do -1 to drop intercept!
 # base3y = hoteldev$children
 # 
 # base3 = cv.gamlr(base3x, base3y, nfold=10, verb=TRUE)
-#  
+# 
 # base3.min = coef(base3, select='min') #this is the minimized lasso
 # base3.1se = coef(base3) #we want the simpler model
-# cat(paste("base3 is a lasso with lambda =", log(base3$lambda.1se) %>% round(4), " and a total of", sum(base3.1se!=0), "coefficients"))
-# base3.1se
+# #cat(paste("base3 is a lasso with lambda =", log(base3$lambda.1se) %>% round(4), " and a total of", sum(base3.1se!=0), "coefficients"))
+# #base3.1se
 # cat(paste('base3 RMSE:', sqrt(base3$cvm[base3$seg.1se]) %>% round(4)))
 
 ```
 
+
+### Model validation: step 1
+
+*Once you've built your best model and assessed its out-of-sample performance using `hotels_dev`, now turn to the data in `hotels_val`.  Now you'll __validate__ your model using this entirely fresh subset of the data, i.e. one that wasn't used to fit OR test as part of the model-building stage.  (Using a separate "validation" set, completely apart from your training and testing set, is a generally accepted best practice in machine learning.) *
+
+*Produce an ROC curve for your best model, using the data in `hotels_val`: that is, plot TPR(t) versus FPR(t) as you vary the classification threshold t.*
+
+See below confusion matrix and ROC curve, where 'Sensitivity' = TPR and Specificity = 1-FPR.
+
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
+#how can I use the model fitted before using cross validation.  Do I need to to use the cadet train function?  The model without cross validation is showing the same RMSE.  So that's promising.
+
+base3.3 = lm(children ~ . - arrival_date + poly(adults, 2) + required_car_parking_spaces:poly(adults, 2) + poly(total_of_special_requests, 2) + reserved_room_type:customer_type + reserved_room_type:average_daily_rate + reserved_room_type:meal + reserved_room_type:stays_in_weekend_nights + reserved_room_type:hotel + hotel:stays_in_weekend_nights, data=hoteldev)
+
+#test accuracy
+hotelval$arrival_date <- substr(hotelval$arrival_date, 6, 10)
+probhat_val = predict(base3.3, newdata=hotelval)
+yhat_val = ifelse(probhat_val >= 0.5, 1, 0)
+table(y=hotelval$children, yhat=yhat_val)
+
+#
+roc_result = roc(response = hotelval$children, predictor = probhat_val)
+plot(roc_result, main = "ROC Curve")
 
 
 ```
 
-
-
-### Model validation: step 1
-
-Once you've built your best model and assessed its out-of-sample performance using `hotels_dev`, now turn to the data in `hotels_val`.  Now you'll __validate__ your model using this entirely fresh subset of the data, i.e. one that wasn't used to fit OR test as part of the model-building stage.  (Using a separate "validation" set, completely apart from your training and testing set, is a generally accepted best practice in machine learning.)  
-
-Produce an ROC curve for your best model, using the data in `hotels_val`: that is, plot TPR(t) versus FPR(t) as you vary the classification threshold t.  
 
 
 ### Model validation: step 2

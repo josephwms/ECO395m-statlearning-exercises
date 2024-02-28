@@ -396,7 +396,7 @@ cat(paste("TPR", tpr ), "\n")
 
 ```
 
-Based on the ROC curve I would recommend a probability threshold of 0.5017094. Since we have a false positive rate of 0 and a true positive of 1, it is safe to say that our model performs exceptionally well at this threshold. We are indeed able to predict whether a mushroom is poisonous or not by using machine learning. However, we still need to be careful because this may be a case of overfitting. To be certain that this exceptional performance is not a product of overfitting, we could test our model on an external dataset that was not used during the training or validation process to see if it  performs similarly.
+Based on the ROC curve I would recommend a probability threshold of 0.5017094. Since we have a false positive rate of 0 and a true positive of 1, it is safe to say that our model performs exceptionally well at this threshold. We are indeed able to predict whether a mushroom is poisonous or not by using machine learning. However, we still need to be careful because this may be a case of overfitting. To be certain that this exceptional performance is not a product of overfitting, we could test our model on an external dataset to see if it performs similarly.
 
 
 

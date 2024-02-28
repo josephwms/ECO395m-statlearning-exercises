@@ -19,6 +19,8 @@ library(glmnet)
 library(pROC)
 library(gamlr)
 library(mosaic)
+library(Metrics)
+library(MASS)
 ```
 
 ## Saratoga house prices
@@ -43,27 +45,79 @@ data_stand[, -1] = scale(data_stand[, -1])
 
 # Generate polynomial features up to power of 2 with interactions for each variable
 predictor = data_stand[,-1]
-predictors_interaction = model.matrix(~ .^2, data = data.frame(predictor))^2
-squared_matrix = sapply(predictor, function(x) x^2)
-colnames(squared_matrix) = paste0("sq_", names(predictor))
-predictors = cbind(predictors_interaction,squared_matrix)
+variables = names(predictor)
+squared_terms = paste0("I(", variables, "^2)", collapse = " + ")
+formula = as.formula(paste("~ .^2 +", squared_terms))
+predictors =  model.matrix(formula, data = predictor)
 
 set.seed(17)
 
-# Fit the data using lasso model
-cv_model = cv.gamlr(x = predictors, y = data_stand$price, alpha = 1)
-coef(cv_model, s = "1se")
-lasso_rmse = sqrt(cv_model$cvm[cv_model$seg.1se])
+# Fit the data with the medium model and see the average RMSE under CV.
+rmse_values = numeric(10)
+for (i in 1:10) {
+  # Split data into training and testing sets
+  train_index = createDataPartition(data_stand$price, p = 0.8, list = FALSE)
+  X_train = data_stand[train_index, -1]
+  y_train = data_stand[train_index, 1]
+  X_test = data_stand[-train_index, -1]
+  y_test = data_stand[-train_index, 1]
+  
+  # Fit linear regression model
+  model = lm(y_train ~ ., data = as.data.frame(X_train))
+  y_pred = predict(model, newdata = as.data.frame(X_test))
+  # Calculate RMSE and store it
+  rmse_values[i] = RMSE(y_test, y_pred)
+}
+linear_rmse = mean(rmse_values)
 ```
 
-Before fitting data to models, we first standardized all the data except price. Now all variables have same predictive effect on price. For the linear model, we generate the polynomial terms up to 2nd power and fit the data with lasso model to do the feature selection. Under cross-validation and 1se criterion, we chose the final model: price ~ landvalue + heating + centralAir + livingArea:centralAir + bathrooms:centralAir + rooms:centralAir + heating:fuel + sq_landValue. Among all the coefficients, centralAir is far bigger than the others and variables related to house area are significant when they intersect with centralAir. The rest two features, landValue and heating also survive, but the square of lanValue is weakly correlated. So we conclude that the landValue, heating and centalAir are three most predictive factor for price.
+Before fitting data to models, we first standardized all the data except price. Now all variables have same predictive effect on price. We first fit the data with the 'medium' model. The baseline out-of-sample RMSE is 58914.447. Then we tried to introduce the interaction term and square terms. We tried with Lasso and Ridge models.
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+# Fit the data using lasso and ridge model
+set.seed(17)
+lasso_model = cv.glmnet(x = predictors, y = data_stand$price, alpha = 1)
+ridge_model = cv.glmnet(x = predictors, y = data_stand$price, alpha = 0)
+lasso_rmse_1se = sqrt(lasso_model$cvm[lasso_model$lambda == lasso_model$lambda.1se])
+ridge_rmse_1se = sqrt(ridge_model$cvm[ridge_model$lambda == ridge_model$lambda.1se])
+```
+
+Under cross-validation and 1se criterion, we chose the Lasso model: price ~ landvalue + livingArea + bathrooms + waterfront + centralAir + waterfront^2 + centralAir^2 + landValue:newConstruction + livingArea:centralAir + bathrooms:centralAir. Ridge suggests that landvalue, livingArea, bathrooms, rooms, centralAir^2 and waterfront:newConstruction are most effective. Both out-of-sample RMSE of Lasso and Ridge don't perform better than the baseline. Thus we considered to manually choose some features.
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+set.seed(17)
+
+# Fit the data with the linear model and see the average RMSE under CV.
+rmse_values1 = numeric(10)
+for (i in 1:10) {
+  # Split data into training and testing sets
+  train_index = createDataPartition(data_stand$price, p = 0.8, list = FALSE)
+  X_train = predictors[train_index, -1]
+  y_train = data_stand[train_index, 1]
+  X_test = predictors[-train_index, -1]
+  y_test = data_stand[-train_index, 1]
+  
+  # Fit linear regression model
+  model = lm(y_train ~ landValue + livingArea + bathrooms + waterfront + centralAir
+             + I(waterfront^2) + I(centralAir^2) + landValue:newConstruction + livingArea:centralAir
+             + bathrooms:centralAir + bathrooms + rooms + waterfront:newConstruction, data = as.data.frame(X_train))
+  y_pred = predict(model, newdata = as.data.frame(X_test))
+  # Calculate RMSE and store it
+  rmse_values1[i] = RMSE(y_test, y_pred)
+}
+linear_rmse1 = mean(rmse_values1)
+
+```
+
+We combine the terms appeared in Lasso and Ridge regression and we get a better linear model than the medium one. Then we go with KNN model.
 
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
 # KNN Model
 set.seed(17)
 # Use lasso model to provide feature selection guidance for knn
-lasso_guide = cv.gamlr(x = predictor, y = data_stand$price, alpha = 1)
-coef(lasso_guide, s = "1se")
+predictor_matrix = as.matrix(predictor)
+lasso_guide = cv.glmnet(x = predictor_matrix, y = data_stand$price, alpha = 1)
+coef(lasso_guide, s = "lambda.1se")
 
 run_knnreg_cv = function(data, num_folds) {
   k_values = seq(2, 100, by = 2)  # values of k to be evaluated
@@ -83,7 +137,8 @@ run_knnreg_cv = function(data, num_folds) {
       train_data = data[folds != fold, ]
       test_data = data[folds == fold, ]
       # Perform KNN regression
-      model = knnreg(price ~ landValue + livingArea + bathrooms + waterfront + centralAir, data = train_data, k = k)
+      model = knnreg(price ~ lotSize + landValue + livingArea + bathrooms + rooms + waterfront
+                     + newConstruction + centralAir, data = train_data, k = k)
       # Make predictions
       predictions = predict(model, test_data)
       # Calculate RMSE for this fold
@@ -106,7 +161,7 @@ optimal_k = rmse_result[which.min(rmse_result$avg_rmse), ]$k
 knn_rmse = rmse_result[optimal_k/2,]$avg_rmse
 ```
 
-For the KNN model, we use lasso model to do the feature selection for us. We assuming that features that are more important in Lasso also make sense in KNN model. We choose landValue, livingArea, bathrooms, waterfront and centralAir to fit the KNN model. Under CV, we choose the optimal k equal to 22. As a result, the RMSE for lasso model in part 1 is 82860.643 and for KNN model is 59689.196. SO KNN model performs better in out-of-sample RMSE. All the RMSE here are the average RMSE under cross-validation. 
+For the KNN model, we use lasso model to do the feature selection for us. We assuming that features that are more important in Lasso also make sense in KNN model. We choose lotSize, landValue, livingArea, bathrooms, rooms, waterfront, newConstruction and centralAir to fit the KNN model. Under CV, we choose the optimal k equal to 18. However, KNN model performs worse in out-of-sample RMSE than medium and our newly find model. All the RMSE here are the average RMSE under cross-validation. 
 
 ## Classification and retrospective sampling
 

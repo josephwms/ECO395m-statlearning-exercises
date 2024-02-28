@@ -333,43 +333,6 @@ predictions = predict(cv_fit, newx = x_test, s = "lambda.min", type = "response"
 # Generate the ROC curve
 # I tried to plot the ROC through a more manual method by going sequencing through each of the thresholds and found the tpr and fpr of each threshold using a for loop and still got the same shape for the ROC curve so I used the ROC function for simplicity.
 
-# # Generate the ROC curve
-# thresholds =  seq(0, 1, by= 0.005)
-# 
-# # Initialize vectors to store TPRs and FPRs
-# tprs = numeric(length(thresholds))
-# fprs = numeric(length(thresholds))
-# 
-# # Calculate TPR and FPR for each threshold
-# for (i in seq_along(thresholds)) {
-#   threshold = thresholds[i]
-#   
-#   # Predict class based on threshold
-#   predicted_class = ifelse(predictions > threshold, 1, 0)
-#   
-#   # Calculate confusion matrix elements
-#   tp = sum(predicted_class == 1 & y_test == 1) # True positives
-#   tn = sum(predicted_class == 0 & y_test == 0) # True negatives
-#   fp = sum(predicted_class == 1 & y_test == 0) # False positives
-#   fn = sum(predicted_class == 0 & y_test == 1) # False negatives
-#   
-#   # Calculate TPR and FPR
-#   tpr = tp / (tp + fn)
-#   fpr = fp / (fp + tn)
-#   
-#   # Store TPR and FPR
-#   tprs[i] = tpr
-#   fprs[i] = fpr
-# }
-# 
-# tprs
-# fprs
-# 
-# # Plot ROC curve
-# plot(fprs, tprs, type = "l", col = "blue", xlab = "False Positive Rate", ylab = "True Positive Rate", main = "ROC Curve")
-# abline(a = 0, b = 1, lty = 2) # Diagonal line
-
-
 roc_result = roc(response = y_test, predictor = predictions)
 plot(roc_result, main = "ROC Curve")
 
@@ -394,12 +357,4 @@ cat(paste("TPR", tpr ), "\n")
 ```
 
 Based on the ROC curve I would recommend a probability threshold of 0.5017094. Since we have a false positive rate of 0 and a true positive of 1, it is safe to say that our model performs exceptionally well at this threshold. However, we still need to be careful because this may be a case of overfitting. To be certain that this exceptional performance is not a product of overfitting, we could test our model on an external dataset to see if it performs similarly. In conclusion, we are indeed able to predict whether a mushroom is poisonous or not by using machine learning (as long as overfitting is not present). 
-
-
-
-
-
-
-
-
 

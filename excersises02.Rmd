@@ -364,7 +364,7 @@ print(cv_fit$lambda.min)
 
 ```
 
-Using the lasso-penalized logistic regression model, we get the graph depicted above which shows the relationship between log lambda and binomial deviance. The lambda that minimizes deviance is approximately 0.0001444448. We can use this value to evaluate the out-of-sample performance of your model through a ROC curve. 
+Using the lasso-penalized logistic regression model, we get the graph depicted above which shows the relationship between log lambda and binomial deviance. The lambda that minimizes deviance is approximately 0.0001444448. We can use this value to evaluate the out-of-sample performance of our model through a ROC curve. 
 
 ``` {r, message=FALSE, echo=FALSE, warning=FALSE}
 

@@ -315,7 +315,7 @@ plot(cv_fit)
 # Print the minimum lambda value used
 print(cv_fit$lambda.min)
 
-# Using the lasso-penalized logistic regression model, we get the graph depicted above showing the relationship between log lambda and binomial deviance. The lambda that minimizes deviance is approximately 0.0001444448. We can use this value to evaluate the out-of-sample performance of your model through a ROC curve. 
+# Using the lasso-penalized logistic regression model, we get the graph depicted above which shows the relationship between log lambda and binomial deviance. The lambda that minimizes deviance is approximately 0.0001444448. We can use this value to evaluate the out-of-sample performance of your model through a ROC curve. 
 
 # Predict on the test set
 # Here we extract the probabilities for the class of interest (which is the second column of the predict matrix)
@@ -325,11 +325,10 @@ predictions = predict(cv_fit, newx = x_test, s = "lambda.min", type = "response"
 roc_result = roc(response = y_test, predictor = predictions)
 plot(roc_result, main = "ROC Curve")
 
-# The ROC curve in this case is not exactly a curve but rather 2 perpendicular lines that intersect at (1,1). This means that the is high sensitivity and high specificity and thus is effective at distinguishing between the two classes (poisonous and non-poisonous mushrooms).
+# The ROC curve in this case is not exactly a curve but rather 2 perpendicular lines that intersect at (1,1). This means that the model has high sensitivity and high specificity and thus is effective at distinguishing between the two classes (poisonous and non-poisonous mushrooms).
 
 # Find the optimal threshold
 coords(roc_result, "best", ret = c("threshold", "sensitivity", "specificity"))
-
 
 
 best_coords = coords(roc_result, "best", ret = c("specificity", "sensitivity"))
@@ -338,7 +337,7 @@ tpr = best_coords["sensitivity"]
 
 list(FPR = fpr, TPR = tpr)
 
-# Based on the ROC curve I would recommend a probability threshold of 0.5017094. Since our false positive rate of 0 and a true positive of 1, it is safe to say that our model performs exceptionally well at this threshold. 
+# Based on the ROC curve I would recommend a probability threshold of 0.5017094. Since we have a false positive rate of 0 and a true positive of 1, it is safe to say that our model performs exceptionally well at this threshold. 
 
 ```
 

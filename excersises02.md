@@ -6,12 +6,6 @@ considered in class. Recall that a starter script here is in
 model comparison exercise) between two model classes: linear models and
 KNN.*
 
-*- Build the best linear model for price that you can. It should clearly
-outperform the “medium” model that we considered in class. Use any
-combination of transformations, engineering features, polynomial terms,
-and interactions that you want; and use any strategy for selecting the
-model that you want. *
-
 Before fitting data to models, we first standardized all the data except
 price. Now all variables have same predictive effect on price. We first
 fit the data with the ‘medium’ model. The baseline out-of-sample RMSE is
@@ -27,21 +21,10 @@ Ridge suggests that `landvalue`, `livingArea`, `bathrooms`, `rooms`,
 `centralAir^2` and `waterfront:newConstruction` are most effective.
 
 Out-of-sample RMSEs for both Lasso and Ridge are higher than baseline.
-We combine features identified by both in the following linear model.
+We combine features identified by both in a linear model RMSE reported
+below:
 
     ## RSME for linear model is 57998.4545691018
-
-In summary, we used terms yielded by Lasso and Ridge regression to
-identify a stronger linear model than the medium.
-
-*- Now build the best K-nearest-neighbor regression model for price that
-you can. Note: you still need to choose which features should go into a
-KNN model, but you don’t explicitly include interactions or polynomial
-terms. The method is sufficiently adaptable to find interactions and
-nonlinearities, if they are there. But do make sure to *standardize*
-your variables before applying KNN, or at least do something that
-accounts for the large differences in scale across the different
-variables here. *
 
 For the KNN model, we use lasso model to do the feature selection for
 us. We assuming that features that are more important in Lasso also make
@@ -49,29 +32,11 @@ sense in KNN model. We choose `lotSize`, `landValue`, `livingArea`,
 `bathrooms`, `rooms`, `waterfront`, `newConstruction` and `centralAir`
 to fit the KNN model. Under CV, we choose the optimal k equal to 18.
 However, KNN model performs worse in out-of-sample RMSE than the medium
-and improved linear models. All RSME’s reported are cross-validated
-averages.
-
-    ## 16 x 1 sparse Matrix of class "dgCMatrix"
-    ##                          s1
-    ## (Intercept)     211966.7054
-    ## lotSize            756.0515
-    ## age                  .     
-    ## landValue        28495.4134
-    ## livingArea       41446.5524
-    ## pctCollege           .     
-    ## bedrooms             .     
-    ## fireplaces           .     
-    ## bathrooms        13686.6243
-    ## rooms              651.9639
-    ## heating              .     
-    ## fuel                 .     
-    ## sewer                .     
-    ## waterfront       -6720.0651
-    ## newConstruction    602.8506
-    ## centralAir       -4137.4687
+and improved linear models.
 
 ![](excersises02_files/figure-markdown_strict/unnamed-chunk-5-1.png)
+
+    ## RSME for KNN model is 60011.3278753781
 
 ## Classification and retrospective sampling
 

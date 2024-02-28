@@ -360,7 +360,7 @@ cv_fit = cv.glmnet(x_train, y_train, family = "binomial", alpha = 1)
 plot(cv_fit)
 
 # Print the minimum lambda value used
-print(cv_fit$lambda.min)
+cat("Ideal lambda:", cv_fit$lambda.min)
 
 ```
 

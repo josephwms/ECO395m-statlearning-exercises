@@ -26,20 +26,20 @@ library(modelr)
 
 First, listen to [this podcast from Planet Money.](https://www.npr.org/sections/money/2013/04/23/178635250/episode-453-what-causes-what)  Then use your knowledge of statistical learning to answer the following questions.
 
-1. Why can’t I just get data from a few different cities and run the regression of “Crime” on “Police” to understand how more cops in the streets affect crime? (“Crime” refers to some measure of crime rate and “Police” measures the number of cops in a city.)  
+*1. Why can’t I just get data from a few different cities and run the regression of “Crime” on “Police” to understand how more cops in the streets affect crime? (“Crime” refers to some measure of crime rate and “Police” measures the number of cops in a city.)*
 
-2. How were the researchers from UPenn able to isolate this effect? Briefly describe their approach and discuss their result in the “Table 2” below, from the researchers' paper. 
+  Selection bias!  Some cities have more police because of more crime and other confounding factors!
 
-3. Why did they have to control for Metro ridership? What was that trying to capture?   
+*2. How were the researchers from UPenn able to isolate this effect? Briefly describe their approach and discuss their result in the “Table 2” below, from the researchers' paper. *
 
-4. Below I am showing you "Table 4" from the researchers' paper.  Just focus
-on the first column of the table. Can you describe the model being estimated here?
-What is the conclusion?
+  The researchers were able to isolate this effect through a natural experiment by observing changing in crime rate between 'terrorist threat' days and normal days.  The intuition here is that terrorism threat status should be independent of day-to-day factors causing crime but WILL increase police presence in the city.  In table2, we see the results on the experiment: that an increased police presence accounts for a decrease of ~6-7 crimes in the city, a result which is statistically significant at the .05 level.
 
-```{r, message=FALSE, echo=FALSE, warning=FALSE}
+*3. Why did they have to control for Metro ridership? What was that trying to capture?*   
 
+Here, metro ridership is presented as a proxy for foot-traffic in the city.  In the regression above, `Log(midday ridership)` is offered as an omitted variable able to explain variation between crime rate and terrorist threat status.  However, the `High Alert` value and significance is relatively unchanged with the addition of `Log(midday ridership)`, so we can conclude that variation in crime is likely caused by police presence and not by differences in pedestrian behavior.
 
-```
+*4. Below I am showing you "Table 4" from the researchers' paper.  Just focus on the first column of the table. Can you describe the model being estimated here? What is the conclusion?*
+
 
 
 ## Tree modeling: dengue cases

@@ -3,6 +3,7 @@ title: 'ECO 395M: StatLearning Exercise 1'
 author: "Joseph Williams, Aahil Navroz, Suqian Qi"
 date: "`r Sys.Date()`"
 output: 
+  html_document:
   md_document:
 
 ---

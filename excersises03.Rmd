@@ -74,12 +74,14 @@ library(xgboost)
 library(kknn)
 library(rpart)
 library(Metrics)
+library(xgboost)
+library(pdp)
+library(ggplot2)
 
 set.seed(23)
 
 data = read.csv("./data/greenbuildings.csv")
 
-# Preprocess and Feature Engineering
 # Calculate revenue per square foot
 data$revenue = (data$Rent * data$leasing_rate) 
 # Exclude non-predictive columns (e.g., identifiers) as well ass  rent and lease rate to remove redundancy 
@@ -126,7 +128,7 @@ decision_tree_model = rpart(revenue ~ .,
                              control = rpart.control(cp = 0.001)) # Tuning parameter 'cp' for complexity
 
 # Random Forest
-rf_model = randomForest(revenue ~ ., data = train_data, ntree = 500)
+rf_model = randomForest(revenue ~ ., data = train_data, ntree = 1000)
 
 # GBM
 gbm_model = gbm(revenue ~ ., data = train_data, distribution = "gaussian",
@@ -134,10 +136,8 @@ gbm_model = gbm(revenue ~ ., data = train_data, distribution = "gaussian",
 
 # XGBoost
 xgb_data = xgb.DMatrix(data = as.matrix(train_data[, -which(names(train_data) == "revenue")]), label = train_data$revenue)
-params = list(booster = "gbtree", eta = 0.1, max_depth = 6, subsample = 0.7, colsample_bytree = 0.7)
-xgb_model = xgb.train(params = params, data = xgb_data, nrounds = 100, early_stopping_rounds = 10, watchlist = list(eval = xgb_data), verbose = 0)
-
-# Model Evaluation on test set
+params = list(booster = "gbtree", eta = 0.1, max_depth = 8, subsample = 0.7, colsample_bytree = 0.7)
+xgb_model = xgb.train(params = params, data = xgb_data, nrounds = 10000, early_stopping_rounds = 10, watchlist = list(eval = xgb_data), verbose = 0)
 
 # Prepare test data for prediction
 x_test = model.matrix(revenue ~ . - 1, data = test_data)
@@ -173,6 +173,12 @@ barplot_heights = barplot(rmse_values,
                            main = "RMSE Comparison Among Models", 
                            ylab = "RMSE Values",
                            las = 2, cex.names = 0.7)
+
+
+# we tested various models and found that the xgboost model gives us the lowest rmse so we will continue to to quantify the average change in rental income per square foot 
+
+
+
 
 ```
 

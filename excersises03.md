@@ -196,16 +196,8 @@ increase of LEED or EnergyStar certifications as $100 revenue/sqft/yr.
 `medianHouseValue`, using the other available features. Write a short
 report detailing your methods. Make sure your report includes an
 estimate for the overall out-of-sample accuracy of your proposed model.
-Also include three figures:*
-
-*- a plot of the original data, using a color scale to show
-medianHouseValue (or log medianHouseValue) versus longitude (x) and
-latitude (y).* 
-*- a plot of your model’s predictions of
-medianHouseValue (or log medianHouseValue) versus longitude (x) and
-latitude (y).* 
-*- a plot of your model’s errors/residuals (or log
-residuals) versus longitude (x) and latitude (y).*
+Also include three figures: - a plot of the original data, a plot of your 
+model’s predictions, and a plot of your model’s errors/residuals.*
 
 
 We first scale all data except the dependent variable and split the

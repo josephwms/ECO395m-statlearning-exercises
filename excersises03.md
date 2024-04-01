@@ -1,5 +1,5 @@
 # ECO 395M: StatLearning Exercise 3
-###Joseph Williams, Aahil Navroz, Qi Suqian
+### Joseph Williams, Aahil Navroz, Qi Suqian
 ### 04/01/2023
 
 

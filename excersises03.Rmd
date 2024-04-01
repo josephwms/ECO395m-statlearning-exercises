@@ -6,9 +6,7 @@ output:
   md_document:
 ---
 
-```{r, message=FALSE, echo=FALSE, warning=FALSE}
 
-```
 
 ## What causes what?
 *1. Why can’t I just get data from a few different cities and run the regression of “Crime” on “Police” to understand how more cops in the streets affect crime? (“Crime” refers to some measure of crime rate and “Police” measures the number of cops in a city.)*
@@ -229,7 +227,7 @@ train_data = data[train_index, ]
 test_data = data[-train_index, ]
 
 # # Model Training
-# #These are just base line models that require tuning 
+# #These are just base models that require tuning 
 # 
 # # Linear Regression
 # lm_model = lm(revenue ~ ., data = train_data)
@@ -311,17 +309,17 @@ xgb_predict = predict(xgb_model, newdata = test_matrix)
 
 #Calcuate RMSE for each model
 
-#lm_rmse <- rmse(actual, lm_predict)
-#lm_step_rmse <- rmse(actual, lm_step_predict)
-#lasso_rmse <- rmse(actual, lasso_predict)
-#knn_rmse <- rmse(actual, knn_predict)
-#dt_rmse <- rmse(actual, dt_predict)
-rf_rmse <- rmse(actual, rf_predict)
-gbm_rmse <- rmse(actual, gbm_predict)
-xgb_rmse <- rmse(actual, xgb_predict)
+#lm_rmse = rmse(actual, lm_predict)
+#lm_step_rmse = rmse(actual, lm_step_predict)
+#lasso_rmse = rmse(actual, lasso_predict)
+#knn_rmse = rmse(actual, knn_predict)
+#dt_rmse = rmse(actual, dt_predict)
+rf_rmse = rmse(actual, rf_predict)
+gbm_rmse = rmse(actual, gbm_predict)
+xgb_rmse = rmse(actual, xgb_predict)
 
 # Create a data frame
-rmse_values <- data.frame(
+rmse_values = data.frame(
   Model = c("rf", "gbm", "xgb"),
   RMSE = c(rf_rmse, gbm_rmse, xgb_rmse)
 )
@@ -624,7 +622,7 @@ ggplot() +
 ```
 
 
-It appears as though our model is best able to predict average housing prices, and struggles to predict especially low and high prices in the interior and coast, respectively.  California is a land of extremes!
+Our model does very well!  We are able to predict both the low housing prices of the interior and the high housing prices of the coastal region with very few outliers.
 
 
 

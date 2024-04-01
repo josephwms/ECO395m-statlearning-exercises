@@ -1,3 +1,8 @@
+# ECO 395M: StatLearning Exercise 3
+## Author: Joseph Williams, Aahil Navroz, Qi Suqian
+### Date: `r Sys.Date()`
+
+
 ## What causes what?
 
 *1. Why can’t I just get data from a few different cities and run the

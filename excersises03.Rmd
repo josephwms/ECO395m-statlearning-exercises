@@ -11,16 +11,13 @@ output:
 ```
 
 ## What causes what?
-
-First, listen to [this podcast from Planet Money.](https://www.npr.org/sections/money/2013/04/23/178635250/episode-453-what-causes-what)  Then use your knowledge of statistical learning to answer the following questions.
-
 *1. Why can’t I just get data from a few different cities and run the regression of “Crime” on “Police” to understand how more cops in the streets affect crime? (“Crime” refers to some measure of crime rate and “Police” measures the number of cops in a city.)*
 
-  Selection bias!  Some cities have more police because of more crime and other confounding factors!
+Selection bias!  Some cities have more police because of more crime and other confounding factors!
 
 *2. How were the researchers from UPenn able to isolate this effect? Briefly describe their approach and discuss their result in the “Table 2” below, from the researchers' paper. *
 
-![Table 2](figures/ex3table2.png)
+![Table 2](figures/ex3table2.png){width=50%}
 
   The researchers were able to isolate this effect through a natural experiment by observing changing in crime rate between 'terrorist threat' days and normal days.  The intuition here is that terrorism threat status should be independent of day-to-day factors causing crime but WILL increase police presence in the city.  In table2, we see the results on the experiment: that an increased police presence accounts for a decrease of ~6-7 crimes in the city, a result which is statistically significant at the .05 level.
 
@@ -30,7 +27,7 @@ Here, metro ridership is presented as a proxy for foot-traffic in the city.  In 
 
 *4. Below I am showing you "Table 4" from the researchers' paper.  Just focus on the first column of the table. Can you describe the model being estimated here? What is the conclusion?*
 
-![Table 4](figures/ex3table4.png)
+![Table 4](figures/ex3table4.png){width=50%}
 
 
 
@@ -286,6 +283,9 @@ xgb_model = xgb.train(params = params, data = xgb_data, nrounds = 10000, early_s
 x_test = model.matrix(revenue ~ . - 1, data = test_data)
 test_matrix = xgb.DMatrix(data = as.matrix(test_data[, -which(names(test_data) == "revenue")]))
 
+#actual revenue values per house
+actual = test_data$revenue
+
 # Generate predictions
 #lm_predict = predict(lm_model, newdata = test_data)
 #lm_step_predict = predict(lm_step, newdata = test_data)
@@ -300,7 +300,7 @@ xgb_predict = predict(xgb_model, newdata = test_matrix)
 
 #lm_rmse <- rmse(actual, lm_predict)
 #lm_step_rmse <- rmse(actual, lm_step_predict)
-lasso_rmse <- rmse(actual, lasso_predict)
+#lasso_rmse <- rmse(actual, lasso_predict)
 #knn_rmse <- rmse(actual, knn_predict)
 #dt_rmse <- rmse(actual, dt_predict)
 rf_rmse <- rmse(actual, rf_predict)
@@ -316,7 +316,8 @@ rmse_values <- data.frame(
 ggplot(rmse_values, aes(x = Model, y = RMSE)) +
   geom_col(width = 0.6) +
   coord_cartesian(ylim = c(500, max(rmse_values$RMSE) * 1.1)) +
-  ggtitle("RMSE Comparison Among Models")
+  ggtitle("RMSE Comparison Among Models") +
+  theme_minimal()
 
 # Print the minimum lambda value used
 cat("xgboost rsme:", xgb_rmse)

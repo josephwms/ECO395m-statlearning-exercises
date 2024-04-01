@@ -28,7 +28,7 @@ Here, metro ridership is presented as a proxy for foot-traffic in the city.  In 
 *4. Below I am showing you "Table 4" from the researchers' paper.  Just focus on the first column of the table. Can you describe the model being estimated here? What is the conclusion?*
 
 ![Table 4](figures/ex3table4.png){width=50%}
-
+Here, the authors partition their data to distinguish between district 1 and all other districts.  District 1 is a district of high government importance, and non-patrolling officers from across the city are directed here during periods of high alert.  Our conclusion from the regression is that the majority of decline in crime during high alert periods is located in district 1, and that decreases in other parts of the city are not statistically significant.  This aligns with the findings of the paper, since increase of police presence will be dedicated towards district 1, we expect this is where decrease of crime should occur IF more police -> less crime.
 
 
 ## Tree modeling: dengue cases
@@ -39,7 +39,7 @@ Here, metro ridership is presented as a proxy for foot-traffic in the city.  In 
 *- precipitation_amt*
 *- wild card/writer's choice: you choose a feature that looks interesting and make a partial dependence plot for that.*
 
-We first impute the data with KNN method and scale all varaibles except the dependent one.
+We first impute the data with KNN method and scale all variables except the dependent one.
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
 dengue = read.csv("./data/dengue.csv")
 library(rpart)
@@ -78,8 +78,9 @@ plot(treemodel)
 best_cp = tunedf$.cp[3]
 cart_model = rpart(total_cases ~., data=train_data, control=rpart.control(cp=best_cp))
 ```
+
 From the plot, we choose cp to be 0.011 according to minimium criterion. 
-Then we move to the random forest model.We choose the number of bootstrapped sample to be 2000 to avoid selection. However, we choose the number of features to sample within each bootstrapped sample by OOB method.
+Then we move to the random forest model. We choose the number of bootstrapped sample to be 2000 to avoid selection for n.trees. number of features is chosen using OOB method.
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
 ###### 2 random forest model
 fitControl2 = trainControl(method = "oob", number = 10)
@@ -90,36 +91,39 @@ plot(rfmodel)
 best_mtry = mtryGrid$.mtry[5]
 rf_model = randomForest(x=train_data[,-3], y=train_data[,3],ntree=2000,mtry=best_mtry)
 ```
+
 From the plot, we choose mtry to be 5 according to the minimum criterion.
-Then we consider the Gradient Boosting Decision Tree model(GBDT). We choose large number of trees to avoid selection for n.trees. For the distribution of y, we also try for poisson distribution besides the common choice, gaussian distribution, since the outcome total_cases is a sum of count and we assume it may follows a poisson distribution. Then we choose the interaction.depth and shrinkage by CV. We choose the default value for n.minobsinnode as 10 becasuse of the small sample sie and we don't want each tree to go too deep which may lead to overfittness.(The selection may take a long time and u can just run the last two command)
+
+Next, we consider the Gradient Boosting Decision Tree model (GBDT). Once again, we choose a large number of trees to avoid selection for n.trees. In addition to the standard choice of gaussian distribution, we choose a poisson distribution for y since the outcome total_cases is a sum of count. Next we choose the interaction.depth and shrinkage by CV. We choose the default value for n.minobsinnode as 10 due to the small sample size, and because we don't want each tree to go too deep which may lead to overfitting.  (Here, the selection may take a long time.  You can can just run the last two command)
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
 ###### 3 GBDT model
-fitControl3 = trainControl(method = "cv",  
-                              number = 10)    
-gbm_grid = expand.grid(interaction.depth = 1:8,  
-                         n.trees = 2000,          
-                         shrinkage = c(0.001,0.005,0.01, 0.05, 0.1),
-                       n.minobsinnode = 10)
-norm_model = train(total_cases ~ ., data = train_data,
-                   method = "gbm",
-                   trControl = fitControl3,
-                   tuneGrid = gbm_grid,
-                   verbose = FALSE,
-                   metric = "RMSE",  
-                   distribution = "gaussian")
-poi_model = train(total_cases ~ ., data = train_data,
-                  method = "gbm",
-                  trControl = fitControl3,
-                  tuneGrid = gbm_grid,
-                  verbose = FALSE,
-                  metric = "RMSE",  
-                  distribution = "poisson")
+# fitControl3 = trainControl(method = "cv",  
+#                               number = 10)    
+# gbm_grid = expand.grid(interaction.depth = 1:8,  
+#                          n.trees = 2000,          
+#                          shrinkage = c(0.001,0.005,0.01, 0.05, 0.1),
+#                        n.minobsinnode = 10)
+# norm_model = train(total_cases ~ ., data = train_data,
+#                    method = "gbm",
+#                    trControl = fitControl3,
+#                    tuneGrid = gbm_grid,
+#                    verbose = FALSE,
+#                    metric = "RMSE",  
+#                    distribution = "gaussian")
+# poi_model = train(total_cases ~ ., data = train_data,
+#                   method = "gbm",
+#                   trControl = fitControl3,
+#                   tuneGrid = gbm_grid,
+#                   verbose = FALSE,
+#                   metric = "RMSE",  
+#                   distribution = "poisson")
 gbm_nor_model = gbm(total_cases ~ ., data = train_data, distribution = "gaussian", 
                 n.trees=2000,interaction.depth = 7,shrinkage = 0.01,n.minobsinnode = 10)
 gbm_poi_model = gbm(total_cases ~ ., data = train_data, distribution = "poisson", 
                     n.trees = 2000, interaction.depth = 8, shrinkage = 0.005,n.minobsinnode = 10)
 ```
-From our tunning result, for gaussian model, depth is 7 and shrinkage rate is 0.01; for poisson model, depth is 8 and shrinkage rate is 0.005.
+
+From our tuning result, for gaussian model, depth is 7 and shrinkage rate is 0.01; for poisson model, depth is 8 and shrinkage rate is 0.005.
 Then we use the test data to measure the performance for all these four models by RMSE.
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
 ####### 4 compare the out-of-sample performance
@@ -148,28 +152,33 @@ text(x = barplot_heights, y = -max(rmse_value)*0.1, labels = model_names,
 text(x = barplot_heights, y = rmse_value + max(rmse_value)*0.05, 
      labels = round(rmse_value, 2), srt = 0, pos = 3, cex = 0.8)
 ```
-The plot shows our CART model has the lowest RMSE. Then we make 3 partial dependence plots for CART model, specific_humidity, precipitation_amt and tdtr_k.
+The plot shows our CART model has the lowest RMSE. Finally, we make 3 partial dependence plots for CART model: specific_humidity, precipitation_amt and tdtr_k.
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
 ##### 5 PD plot
 pd1 = partial(cart_model, pred.var = "specific_humidity")
 pd1_df = as.data.frame(pd1)
 ggplot(pd1_df, aes(x = specific_humidity, y = yhat)) +
   geom_line() +
-  labs(title = 'Partial Dependence on "Specific_humidity"', x = "Specific_humidity")
+  labs(title = 'Partial Dependence on "Specific_humidity"', x = "Specific_humidity") +
+  theme_minimal()
 
 pd2 = partial(cart_model, pred.var = "precipitation_amt")
 pd2_df = as.data.frame(pd2)
 ggplot(pd2_df, aes(x = precipitation_amt, y = yhat)) +
   geom_line() +
-  labs(title = 'Partial Dependence on "Precipitation_amt"', x = "Precipitation_amt")
+  labs(title = 'Partial Dependence on "Precipitation_amt"', x = "Precipitation_amt") +
+  theme_minimal()
 
 pd3 = partial(cart_model, pred.var = "tdtr_k")
 pd3_df = as.data.frame(pd3)
 ggplot(pd3_df, aes(x = tdtr_k, y = yhat)) +
   geom_line() +
-  labs(title = 'Partial Dependence on "tdtr_k"', x = "tdtr_k")
+  labs(title = 'Partial Dependence on "tdtr_k"', x = "tdtr_k") +
+  theme_minimal()
 
 ```
+
+
 ## Predictive model building: green certification
 
 *Your goal is to build the best predictive model possible for _revenue per square foot per calendar year_, and to use this model to quantify the average change in rental income per square foot (whether in absolute or percentage terms) associated with green certification, holding other features of the building constant. (This might entail, for example, a partial dependence plot, depending on what model you work with here.) Note that revenue per square foot per year is the product of two terms: `rent` and `leasing_rate`!  This reflects the fact that, for example, high-rent buildings with low occupancy may not actually bring in as much revenue as lower-rent buildings with higher occupancy.  *
@@ -267,7 +276,7 @@ test_data = data[-train_index, ]
 
 ![Table 4](figures/Initial_model_comparison.png)
 
-We see that random forest and xgboost do the best out of box.  With some tuning, we are able to identify xgboost as our best possible model.
+We see that, unsurprisingly, random forest and xgboost do the best out of box.  With some tuning, we are able to identify xgboost as our best possible model.
 
 
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
@@ -276,7 +285,7 @@ rf_model = randomForest(revenue ~ ., data = train_data, ntree = 1000)
 
 # XGBoost
 xgb_data = xgb.DMatrix(data = as.matrix(train_data[, -which(names(train_data) == "revenue")]), label = train_data$revenue)
-params = list(booster = "gbtree", eta = 0.1, max_depth = 8, subsample = 0.7, colsample_bytree = 0.7)
+params = list(booster = "gbtree", eta = 0.1, max_depth = 8, subsample = 0.7, colsample_bytree = 0.7, objective = "reg:squarederror")
 xgb_model = xgb.train(params = params, data = xgb_data, nrounds = 10000, early_stopping_rounds = 10, watchlist = list(eval = xgb_data), verbose = 0)
 
 # Prepare test data for prediction
@@ -324,10 +333,12 @@ cat("xgboost rsme:", xgb_rmse)
 
 ```
 
-In order to answer our principal question of whether or not a 'green rating' has a significant effect on building revenue we calculate a partial dependence plot for green_rating vs revenue.
+In order to answer our principal question of whether or not a 'green rating' has a significant effect on building revenue we calculate a partial dependence plot for green_rating vs predicted revenue per square foot using the pdp package.  Note that since we scaled the features earlier, the green rating goes from -0.3083384 to 3.2427753 instead of 0 to 1. Buildings with green certification (a green rating of 1, which scaled to approximately 3.243) are predicted to generate more revenue per square foot than non-green certified buildings (a green rating of 0, which scaled to approximately -0.308).
 
 
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
+library(dplyr)
+
 
 # Generate the partial dependence plot data
 pdp_green = partial(
@@ -338,16 +349,49 @@ pdp_green = partial(
   plot = FALSE  # Do not create the plot automatically
 )
 
+# pred_green1 = c(2391.775, 2490.245)
+# pred_green2 = c(3.2427753, -0.3083384)
+# pred_green = data.frame()
+
 # Plot
 ggplot(pdp_green, aes(x = green_rating, y = yhat)) +
   geom_line() +
   geom_point() +
   xlab("Green Rating") +
   ylab("Average Predicted Revenue") +
-  ggtitle("Partial Dependence of Revenue on Green Rating")
+  ggtitle("Partial Dependence of Revenue on Green Rating") +
+  coord_cartesian(ylim = c(2300, 2775)) +
+  theme_minimal()
+```
+
+As shown, the categorical shift from green_rating == 0 to green_rating == 1 corresponds to roughly $100 of predicted revenue per sqft, all else held constant.  Lets compare to the actual difference in revenue/sqft/yr, where other characteristics are not held constant.
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
 
 
-# This is a graph that depicts the average revenue per foot based on a property's green certification status. Note that since we scaled the features earlier, the green rating goes from -0.3083384 to 3.2427753 instead of 0 to 1. Buildings with green certification (a green rating of 1, which scaled to approximately 3.243) are predicted to generate more revenue per square foot than non-green certified buildings (a green rating of 0, which scaled to approximately -0.308).The difference in predicted revenue between the two categories (green certified and non-green certified) is roughly 2488.989 − 2391.716 = 97.273. This would be the estimated additional revenue per square foot attributed to having a green certification, according to the model's predictions. 
+#For reference, compare to means in actual data for green_rating == 0 vs 1
+green_data = data %>% group_by(green_rating) %>% summarize(revenue = mean(revenue))
+
+# Create the ggplot with geom_line for the data and abline for the lines
+ggplot(green_data, aes(x = green_rating, y = revenue)) +
+  geom_col() +
+  xlab("Green Rating") +
+  ylab("Average Actual Revenue") +
+  ggtitle("Partial Dependence of Revenue on Green Rating") +
+  coord_cartesian(ylim = c(2300, 2775)) +
+  theme_minimal()
+```
+Indeed, here we can see on the same scale of axis that green buildings are much more profitable when we do not take underlying characteristics into consideration.  This is doubtless due to the fact that buildings with green_ratings == 1 are more likely to be nicer overall!  Our model, however, is able to parse out a far more accurate revenue increase of LEED or EnergyStar certifications as $100 revenue/sqft/yr.
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+data2 = read.csv("./data/greenbuildings.csv")
+
+#For reference, compare to means in actual data for green_rating == 0 vs 1
+size_data = data2 %>% group_by(green_rating) %>% summarize(sqft = mean(size))
+
+# Print the minimum lambda value used
+cat("xgboost rsme:", xgb_rmse)
+
 ```
 
 

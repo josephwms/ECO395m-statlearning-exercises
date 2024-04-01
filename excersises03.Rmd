@@ -536,7 +536,7 @@ text(x = barplot_heights, y = rmse_value + max(rmse_value)*0.05,
 library(ggplot2)
 library(maps)
 
-CAhousing_Plot = read.csv('CAhousing.csv')
+CAhousing_Plot = read.csv('./data/CAhousing.csv')
 
 ## data preprocess
 origin_plot = CAhousing_Plot

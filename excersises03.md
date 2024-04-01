@@ -10,7 +10,7 @@ other confounding factors!
 
 *2. How were the researchers from UPenn able to isolate this effect?
 Briefly describe their approach and discuss their result in the “Table
-2” below, from the researchers’ paper. *
+2” below, from the researchers’ paper.*
 
 <figure>
 <img src="figures/ex3table2.png" style="width:50.0%" alt="Table 2" />
@@ -43,6 +43,7 @@ focus on the first column of the table. Can you describe the model being
 estimated here? What is the conclusion?*
 
 <img src="figures/ex3table4.png" style="width:50.0%" alt="Table 4" />
+
 Here, the authors partition their data to distinguish between district 1
 and all other districts. District 1 is a district of high government
 importance, and non-patrolling officers from across the city are
@@ -65,24 +66,23 @@ done *only* on the training data, with the testing data held as a final
 check to compare your best CART model vs. your best random forest model
 vs. your best boosted tree model.) Then, for whichever model has the
 better performance on the testing data, make three partial dependence
-plots: *
+plots:*
 
-*- specific\_humidity* *- precipitation\_amt* *- wild card/writer’s
-choice: you choose a feature that looks interesting and make a partial
-dependence plot for that.*
 
 We first impute the data with KNN method and scale all variables except
 the dependent one.
 
 Now we train the CART model with the training data and select the best
 parameters. Since the sample size is not big, we choose the default
-minsplit and use cv to choose the best cp
+minsplit and use cv to choose the best cp.
+
 ![](excersises03_files/figure-markdown_strict/unnamed-chunk-3-1.png)
 
 From the plot, we choose cp to be 0.011 according to minimium criterion.
 Then we move to the random forest model. We choose the number of
 bootstrapped sample to be 2000 to avoid selection for n.trees. number of
 features is chosen using OOB method.
+
 ![](excersises03_files/figure-markdown_strict/unnamed-chunk-4-1.png)
 
 From the plot, we choose mtry to be 5 according to the minimum
@@ -102,12 +102,20 @@ From our tuning result, for gaussian model, depth is 7 and shrinkage
 rate is 0.01; for poisson model, depth is 8 and shrinkage rate is 0.005.
 Then we use the test data to measure the performance for all these four
 models by RMSE.
-![](excersises03_files/figure-markdown_strict/unnamed-chunk-6-1.png) The
-plot shows our GBDT Normal model has the lowest RMSE. We finish by
+
+![](excersises03_files/figure-markdown_strict/unnamed-chunk-6-1.png) 
+
+The plot shows our GBDT Normal model has the lowest RMSE. We finish by
 making 3 partial dependence plots for the model: specific\_humidity,
 precipitation\_amt and tdtr\_k.
 
-![](excersises03_files/figure-markdown_strict/unnamed-chunk-7-1.png)![](excersises03_files/figure-markdown_strict/unnamed-chunk-7-2.png)![](excersises03_files/figure-markdown_strict/unnamed-chunk-7-3.png)
+![](excersises03_files/figure-markdown_strict/unnamed-chunk-7-1.png)
+
+![](excersises03_files/figure-markdown_strict/unnamed-chunk-7-2.png)
+
+![](excersises03_files/figure-markdown_strict/unnamed-chunk-7-3.png)
+
+
 
 ## Predictive model building: green certification
 
@@ -120,7 +128,7 @@ partial dependence plot, depending on what model you work with here.)
 Note that revenue per square foot per year is the product of two terms:
 `rent` and `leasing_rate`! This reflects the fact that, for example,
 high-rent buildings with low occupancy may not actually bring in as much
-revenue as lower-rent buildings with higher occupancy. *
+revenue as lower-rent buildings with higher occupancy.*
 
 First, we build all of standard models with limited feature engineering
 and see which one does best out of the box! The feature engineering we
@@ -152,8 +160,8 @@ performance. Our final model is xgboost.
 
 In order to answer our principal question of whether or not a ‘green
 rating’ has a significant effect on building revenue we calculate a
-partial dependence plot for green\_rating vs predicted revenue per
-square foot using the pdp package. Note that since we scaled the
+partial dependence plot for `green\_rating` vs predicted revenue/sqft/yr 
+using the pdp package. Note that since we scaled the
 features earlier, the green rating goes from -0.3083384 to 3.2427753
 instead of 0 to 1. Buildings with green certification (a green rating of
 1, which scaled to approximately 3.243) are predicted to generate more
@@ -162,8 +170,8 @@ rating of 0, which scaled to approximately -0.308).
 
 ![](excersises03_files/figure-markdown_strict/unnamed-chunk-10-1.png)
 
-As shown, the categorical shift from green\_rating == 0 to green\_rating
-== 1 corresponds to roughly $100 of predicted revenue per sqft, all else
+As shown, the categorical shift from `green\_rating == 0` to `green\_rating
+== 1` corresponds to roughly $100 of predicted revenue per sqft, all else
 held constant. Lets compare to the actual difference in revenue/sqft/yr,
 where other characteristics are not held constant.
 
@@ -172,9 +180,10 @@ where other characteristics are not held constant.
 Indeed, here we can see on the same scale of axis that green buildings
 are much more profitable when we do not take underlying characteristics
 into consideration. This is doubtless due to the fact that buildings
-with green\_ratings == 1 are more likely to be nicer overall! Our chosen
+with `green\_ratings == 1` are more likely to be nicer overall! Our chosen
 model, however, is able to parse out a far more accurate revenue
 increase of LEED or EnergyStar certifications as $100 revenue/sqft/yr.
+
 
 ## Predictive model building: California housing
 
@@ -186,10 +195,13 @@ Also include three figures:*
 
 *- a plot of the original data, using a color scale to show
 medianHouseValue (or log medianHouseValue) versus longitude (x) and
-latitude (y). * *- a plot of your model’s predictions of
+latitude (y).* 
+*- a plot of your model’s predictions of
 medianHouseValue (or log medianHouseValue) versus longitude (x) and
-latitude (y). * *- a plot of your model’s errors/residuals (or log
+latitude (y).* 
+*- a plot of your model’s errors/residuals (or log
 residuals) versus longitude (x) and latitude (y).*
+
 
 We first scale all data except the dependent variable and split the
 sample into train set and test set. Similar to last problem, we tried 6
@@ -207,19 +219,17 @@ rate. We set the n.trees as 1000 since we think it’s sufficient large
 and we set the distribution as gaussian. Since the sample size is small,
 we set the n.minobsinnode to be 10.
 
-Then we look at the XGBoost model. By CV we choose the 3 best
-parameters: max\_depth, subsample and eta. After the cv selection, we
-run a loop through common parameter options to determine ‘best
-parameters’: max\_depth = 6 and nrounds = 10000.
+Moving onto the XGBoost model, we choose the 3 best
+parameters using cross validation: max\_depth, subsample and eta. 
+After the cv selection, we run a loop through common parameter options 
+to determine ‘best parameters’: max\_depth = 6 and nrounds = 10000.
 
-Now we compare the out-of-sample performance for all these 6 models. The
-plot shows our XGBoost model have the lowest RMSE so we are going to use
-this model for the following figures.
+Finally, we compare the out-of-sample performance for all 5 models. The
+plot shows our XGBoost model have the lowest RMSE.  Therefore, we use
+that model for prediction and to compile requested figures, below!
 
 ![](excersises03_files/figure-markdown_strict/unnamed-chunk-18-1.png)
 
 ![](excersises03_files/figure-markdown_strict/unnamed-chunk-20-1.png)![](excersises03_files/figure-markdown_strict/unnamed-chunk-20-2.png)![](excersises03_files/figure-markdown_strict/unnamed-chunk-20-3.png)
 
-It appears as though our model is best able to predict average housing
-prices, and struggles to predict especially low and high prices in the
-interior and coast, respectively. California is a land of extremes!
+Our model does very well!  We are able to predict both the low housing prices of the interior and the high housing prices of the coastal region with very few outliers.

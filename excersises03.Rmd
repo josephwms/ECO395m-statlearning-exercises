@@ -611,15 +611,11 @@ test_ca$predictedMedianHouseValue = predict(lm_model, newdata = test_ca)
 # Step 2: Calculate residuals
 test_ca$residuals = test_ca$medianHouseValue - test_ca$predictedMedianHouseValue
 
-# Step 3: Merge predictions and residuals with the original unscaled test data
-
-test_ca_plot$predictedMedianHouseValue = test_ca$predictedMedianHouseValue
-test_ca_plot$residuals = test_ca$residuals
 
 # Plot the model's predictions
 ggplot() +
   geom_polygon(data = california_map, aes(x = long, y = lat, group = group), fill = "lightgray", color = "white") +
-  geom_point(data = test_ca_plot, aes(x = longitude, y = latitude, color = predictedMedianHouseValue), size = 1, alpha = 0.5) +
+  geom_point(data = test_ca, aes(x = test_ca_plot$longitude, y = test_ca_plot$latitude, color = predictedMedianHouseValue), size = 1, alpha = 0.5) +
   scale_color_gradient(low = "yellow", high = "blue") +
   labs(title = "Predicted Median House Value", x = "Longitude", y = "Latitude", color = "Predicted Value") +
   theme_minimal() +
@@ -628,7 +624,7 @@ ggplot() +
 # Plot the model's residuals
 ggplot() +
   geom_polygon(data = california_map, aes(x = long, y = lat, group = group), fill = "lightgray", color = "white") +
-  geom_point(data = test_ca_plot, aes(x = longitude, y = latitude, color = residuals), size = 1, alpha = 0.5) +
+  geom_point(data = test_ca, aes(x = test_ca_plot$longitude, y = test_ca_plot$latitude, color = residuals), size = 1, alpha = 0.5) +
   scale_color_gradient2(low = "red", mid = "white", high = "blue", midpoint = 0) +
   labs(title = "Residuals of Predictions", x = "Longitude", y = "Latitude", color = "Residuals") +
   theme_minimal() +

@@ -10,7 +10,7 @@ other confounding factors!
 
 *2. How were the researchers from UPenn able to isolate this effect?
 Briefly describe their approach and discuss their result in the “Table
-2” below, from the researchers’ paper. *
+2” below, from the researchers’ paper.*
 
 <figure>
 <img src="figures/ex3table2.png" style="width:50.0%" alt="Table 2" />

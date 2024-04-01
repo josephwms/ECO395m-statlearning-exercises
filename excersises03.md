@@ -210,7 +210,7 @@ models.
 Then we look at Random forest model. We use 1000 trees and choose mtry
 as default.
 
-We explore 2 boosted tree models here, GBDT and XGboost model. Starting
+Next, we explore the 2 boosted tree models: GBDT and XGBoost. Starting
 with GBDT, we use CV to select the best interaction depth and shrinkage
 rate. We set the n.trees as 1000 since we think it’s sufficient large
 and we set the distribution as gaussian. Since the sample size is small,

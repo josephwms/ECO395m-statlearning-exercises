@@ -103,9 +103,10 @@ rate is 0.01; for poisson model, depth is 8 and shrinkage rate is 0.005.
 Then we use the test data to measure the performance for all these four
 models by RMSE.
 ![](excersises03_files/figure-markdown_strict/unnamed-chunk-6-1.png) The
-plot shows our CART model has the lowest RMSE. Finally, we make 3
-partial dependence plots for CART model: specific\_humidity,
+plot shows our GBDT Normal model has the lowest RMSE. We finish by
+making 3 partial dependence plots for the model: specific\_humidity,
 precipitation\_amt and tdtr\_k.
+
 ![](excersises03_files/figure-markdown_strict/unnamed-chunk-7-1.png)![](excersises03_files/figure-markdown_strict/unnamed-chunk-7-2.png)![](excersises03_files/figure-markdown_strict/unnamed-chunk-7-3.png)
 
 ## Predictive model building: green certification
@@ -175,8 +176,6 @@ with green\_ratings == 1 are more likely to be nicer overall! Our chosen
 model, however, is able to parse out a far more accurate revenue
 increase of LEED or EnergyStar certifications as $100 revenue/sqft/yr.
 
-    ## xgboost rsme: 789.7363
-
 ## Predictive model building: California housing
 
 *Your task is to build the best predictive model you can for
@@ -193,24 +192,23 @@ latitude (y). * *- a plot of your model’s errors/residuals (or log
 residuals) versus longitude (x) and latitude (y).*
 
 We first scale all data except the dependent variable and split the
-sample into train set and test set.
-
-Similar to last problem, we tried 6 models to predict the value for the
-median house value: a baseline linear model, lasso model with 2nd order
-interaction terms, KNN model, Random Forest model, GBDT model and
-XGBoost model. We first run the linear models.
+sample into train set and test set. Similar to last problem, we tried 6
+models to predict the value for the median house value: a baseline
+linear model, lasso model with 2nd order interaction terms, KNN model,
+Random Forest model, GBDT model and XGBoost model. We first run the
+linear models.
 
 Then we look at the KNN model and random forest model. We use CV to
 choose the best k for KNN model. For random forest model, we use 1000
 trees and choose mtry as default.
 
-We explore 2 boosted tree models here, GBDT and XGboost model. We first
-look at the GBDT model. We use CV to select the best interaction depth
-and shrinkage rate. We set the n.trees as 1000 since we think it’s
-sufficient large and we set the distribution as gaussian. Since the
-sample size is small, we set the n.minobsinnode to be 10.
+We explore 2 boosted tree models here, GBDT and XGboost model. Starting
+with GBDT, we use CV to select the best interaction depth and shrinkage
+rate. We set the n.trees as 1000 since we think it’s sufficient large
+and we set the distribution as gaussian. Since the sample size is small,
+we set the n.minobsinnode to be 10.
 
-Then we look at the XGBoost model. By CV we choose the these 3 best
+Then we look at the XGBoost model. By CV we choose the 3 best
 parameters: max\_depth, subsample and eta. After the cv selection, we
 run a loop through common parameter options to determine ‘best
 parameters’: max\_depth = 6 and nrounds = 10000.

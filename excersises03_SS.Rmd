@@ -152,25 +152,24 @@ text(x = barplot_heights, y = -max(rmse_value)*0.1, labels = model_names,
 text(x = barplot_heights, y = rmse_value + max(rmse_value)*0.05, 
      labels = round(rmse_value, 2), srt = 0, pos = 3, cex = 0.8)
 ```
-The plot shows our GBDT Normal model has the lowest RMSE. We finish by making 3 partial dependence plots for the model: specific_humidity, precipitation_amt and tdtr_k.
-
+The plot shows our CART model has the lowest RMSE. Finally, we make 3 partial dependence plots for CART model: specific_humidity, precipitation_amt and tdtr_k.
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
 ##### 5 PD plot
-pd1 = partial(gbm_nor_model, pred.var = "specific_humidity",n.trees = 2000)
+pd1 = partial(cart_model, pred.var = "specific_humidity")
 pd1_df = as.data.frame(pd1)
 ggplot(pd1_df, aes(x = specific_humidity, y = yhat)) +
   geom_line() +
   labs(title = 'Partial Dependence on "Specific_humidity"', x = "Specific_humidity") +
   theme_minimal()
 
-pd2 = partial(gbm_nor_model, pred.var = "precipitation_amt",n.trees = 2000)
+pd2 = partial(cart_model, pred.var = "precipitation_amt")
 pd2_df = as.data.frame(pd2)
 ggplot(pd2_df, aes(x = precipitation_amt, y = yhat)) +
   geom_line() +
   labs(title = 'Partial Dependence on "Precipitation_amt"', x = "Precipitation_amt") +
   theme_minimal()
 
-pd3 = partial(gbm_nor_model, pred.var = "tdtr_k", n.trees = 2000)
+pd3 = partial(cart_model, pred.var = "tdtr_k")
 pd3_df = as.data.frame(pd3)
 ggplot(pd3_df, aes(x = tdtr_k, y = yhat)) +
   geom_line() +
@@ -281,12 +280,23 @@ We see that, unsurprisingly, random forest and xgboost do the best out of box.  
 
 
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
+# # Random Forest
+# rf_model = randomForest(revenue ~ ., data = train_data, ntree = 1000)
+# 
+# # XGBoost
+# xgb_data = xgb.DMatrix(data = as.matrix(train_data[, -which(names(train_data) == "revenue")]), label = train_data$revenue)
+# params = list(booster = "gbtree", eta = 0.1, max_depth = 8, subsample = 0.7, colsample_bytree = 0.7, objective = "reg:squarederror")
+# xgb_model = xgb.train(params = params, data = xgb_data, nrounds = 10000, early_stopping_rounds = 10, watchlist = list(eval = xgb_data), verbose = 0)
+
 # Random Forest
 rf_model = randomForest(revenue ~ ., data = train_data, ntree = 1000)
 
+#GBM
+gbm_model = gbm(revenue ~ ., data = train_data, distribution = "gaussian", n.trees=1000, interaction.depth = 8, shrinkage = 0.1, n.minobsinnode = 10)
+
 # XGBoost
 xgb_data = xgb.DMatrix(data = as.matrix(train_data[, -which(names(train_data) == "revenue")]), label = train_data$revenue)
-params = list(booster = "gbtree", eta = 0.1, max_depth = 8, subsample = 0.7, colsample_bytree = 0.7, objective = "reg:squarederror")
+params = list(booster = "gbtree", eta = 0.01, max_depth = 6, subsample = 0.7, objective = "reg:squarederror")
 xgb_model = xgb.train(params = params, data = xgb_data, nrounds = 10000, early_stopping_rounds = 10, watchlist = list(eval = xgb_data), verbose = 0)
 
 # Prepare test data for prediction
@@ -303,7 +313,7 @@ actual = test_data$revenue
 #knn_predict = predict(knn_model, newdata = test_data)
 #dt_predict = predict(decision_tree_model, newdata = test_data, type = "vector")
 rf_predict = predict(rf_model, newdata = test_data)
-#gbm_predict = predict(gbm_model, newdata = test_data, n.trees = gbm_model$n.trees)
+gbm_predict = predict(gbm_model, newdata = test_data, n.trees = gbm_model$n.trees)
 xgb_predict = predict(xgb_model, newdata = test_matrix)
 
 #Calcuate RMSE for each model
@@ -314,14 +324,14 @@ xgb_predict = predict(xgb_model, newdata = test_matrix)
 #knn_rmse <- rmse(actual, knn_predict)
 #dt_rmse <- rmse(actual, dt_predict)
 rf_rmse <- rmse(actual, rf_predict)
-#gbm_rmse <- rmse(actual, gbm_predict)
+gbm_rmse <- rmse(actual, gbm_predict)
 xgb_rmse <- rmse(actual, xgb_predict)
 
 # Create a data frame
 rmse_values <- data.frame(
-   Model = c("rf", "xgb"),
-   RMSE = c(rf_rmse, xgb_rmse)
- )
+  Model = c("rf", "gbm", "xgb"),
+  RMSE = c(rf_rmse, gbm_rmse, xgb_rmse)
+)
 
 ggplot(rmse_values, aes(x = Model, y = RMSE)) +
   geom_col(width = 0.6) +
@@ -391,6 +401,9 @@ data2 = read.csv("./data/greenbuildings.csv")
 #For reference, compare to means in actual data for green_rating == 0 vs 1
 size_data = data2 %>% group_by(green_rating) %>% summarize(sqft = mean(size))
 
+# Print the minimum lambda value used
+cat("xgboost rsme:", xgb_rmse)
+
 ```
 
 
@@ -403,6 +416,7 @@ size_data = data2 %>% group_by(green_rating) %>% summarize(sqft = mean(size))
 *- a plot of your model's errors/residuals (or log residuals) versus longitude (x) and latitude (y).*
 
 
+We first scale all data except the dependent variable and split the sample into train set and test set.
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
 library(caret)
 library(randomForest)
@@ -428,7 +442,7 @@ train_ca = CAhousing[train_index, ]
 test_ca = CAhousing[-train_index, ]
 ```
 
-We first scale all data except the dependent variable and split the sample into train set and test set. Similar to last problem, we tried 6 models to predict the value for the median house value: a baseline linear model, lasso model with 2nd order interaction terms, KNN model, Random Forest model, GBDT model and XGBoost model. We first run the linear models.
+Similar to last problem, we tried 6 models to predict the value for the median house value: a baseline linear model, lasso model with 2nd order interaction terms, KNN model, Random Forest model, GBDT model and XGBoost model. We first run the linear models.
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
 ## 1 baseline model-OLS linear regression
 lm_model = lm(medianHouseValue ~., data = train_ca)
@@ -449,7 +463,6 @@ lasso_model = glmnet(x_train, y_train, alpha = 1, lambda = best_lambda)
 ```
 
 Then we look at the KNN model and random forest model. We use CV to choose the best k for KNN model. For random forest model, we use 1000 trees and choose mtry as default.
-
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
 ## 3 KNN model
 trainControl_knn = trainControl(method = "cv", number = 10)
@@ -462,7 +475,7 @@ knn_model = knnreg(x=train_ca[,-9], y=train_ca[,9],k=k_choice)
 rf_model = randomForest(x=train_ca[,-9], y=train_ca[,9],ntree=1000)
 ```
 
-We explore 2 boosted tree models here, GBDT and XGboost model. Starting with GBDT, we use CV to select the best interaction depth and shrinkage rate. We set the n.trees as 1000 since we think it's sufficient large and we set the distribution as gaussian. Since the sample size is small, we set the n.minobsinnode to be 10.
+We explore 2 boosted tree models here, GBDT and XGboost model. We first look at the GBDT model. We use CV to select the best interaction depth and shrinkage rate. We set the n.trees as 1000 since we think it's sufficient large and we set the distribution as gaussian. Since the sample size is small, we set the n.minobsinnode to be 10.
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
 ## 5 GBDT model
 trainControl_gbm = trainControl(method = "cv",  
@@ -482,7 +495,7 @@ gbm_model = gbm(medianHouseValue ~ ., data = train_ca, distribution = "gaussian"
                 n.trees=1000,interaction.depth = 8,shrinkage = 0.1,n.minobsinnode = 10)
 ```
 
-Then we look at the XGBoost model. By CV we choose the 3 best parameters: max_depth, subsample and eta. After the cv selection, we run a loop through common parameter options to determine 'best parameters': max_depth = 6 and nrounds = 10000.
+Then we look at the XGBoost model. By CV we choose the these 3 best parameters: max_depth, subsample and eta. After the cv selection, we run a loop through common parameter options to determine 'best parameters': max_depth = 6 and nrounds = 10000.
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
 ## 6 XGBoost model
 xtrain = xgb.DMatrix(data=as.matrix(train_ca[,-9]),label=train_ca[,9])
@@ -612,10 +625,6 @@ test_ca$predictedMedianHouseValue = predict(lm_model, newdata = test_ca)
 # Step 2: Calculate residuals
 test_ca$residuals = test_ca$medianHouseValue - test_ca$predictedMedianHouseValue
 
-# Step 3: Merge predictions and residuals with the original unscaled test data
-
-test_ca_plot$predictedMedianHouseValue = test_ca$predictedMedianHouseValue
-test_ca_plot$residuals = test_ca$residuals
 
 # Plot the model's predictions
 ggplot() +

@@ -73,13 +73,9 @@ library(glmnet)
 library(xgboost)
 library(kknn)
 library(rpart)
-library(Metrics)
-library(xgboost)
-library(pdp)
 library(ggplot2)
 
 set.seed(23)
-
 data = read.csv("./data/greenbuildings.csv")
 
 # Calculate revenue per square foot
@@ -175,10 +171,40 @@ barplot_heights = barplot(rmse_values,
                            las = 2, cex.names = 0.7)
 
 
-# we tested various models and found that the xgboost model gives us the lowest rmse so we will continue to to quantify the average change in rental income per square foot 
 
+# Assuming 'green_rating' is a binary variable for this example.
+# If it's continuous or has more levels, adjust 'green_rating_grid' accordingly.
+green_rating_grid <- unique(train_data$green_rating)
 
+# Storage for average predictions
+average_preds <- numeric(length(green_rating_grid))
 
+# Loop over each 'green_rating' value
+for (i in seq_along(green_rating_grid)) {
+  modified_data <- train_data
+  modified_data$green_rating <- green_rating_grid[i]
+  
+  # Ensure the data structure matches training data's
+  dmatrix_data <- xgb.DMatrix(data = as.matrix(modified_data[, -which(names(modified_data) == "revenue")]), label = modified_data$revenue)
+  
+  # Predict and store average prediction
+  preds <- predict(xgb_model, dmatrix_data)
+  average_preds[i] <- mean(preds)
+}
+
+# Create a data frame for plotting
+plot_data <- data.frame(green_rating = green_rating_grid, average_pred = average_preds)
+
+# Plot
+ggplot(plot_data, aes(x = green_rating, y = average_pred)) +
+  geom_line() +
+  geom_point() +
+  xlab("Green Rating") +
+  ylab("Average Predicted Revenue")
+
+average_preds
+
+# This is a graph that depicts the average revenue per foot based on a property's green certification status. Note that since we scaled the features earlier, the green rating goes from -0.3083384 to 3.2427753 instead of 0 to 1. Buildings with green certification (a green rating of 1, which scaled to approximately 3.243) are predicted to generate more revenue per square foot than non-green certified buildings (a green rating of 0, which scaled to approximately -0.308).The difference in predicted revenue between the two categories (green certified and non-green certified) is roughly 2488.989 − 2391.716 = 97.273. This would be the estimated additional revenue per square foot attributed to having a green certification, according to the model's predictions. 
 
 ```
 

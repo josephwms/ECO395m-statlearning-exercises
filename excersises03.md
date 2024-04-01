@@ -1,78 +1,62 @@
 ## What causes what?
 
-First, listen to [this podcast from Planet
-Money.](https://www.npr.org/sections/money/2013/04/23/178635250/episode-453-what-causes-what)
-Then use your knowledge of statistical learning to answer the following
-questions.
+*1. Why can’t I just get data from a few different cities and run the
+regression of “Crime” on “Police” to understand how more cops in the
+streets affect crime? (“Crime” refers to some measure of crime rate and
+“Police” measures the number of cops in a city.)*
 
-1.  Why can’t I just get data from a few different cities and run the
-    regression of “Crime” on “Police” to understand how more cops in the
-    streets affect crime? (“Crime” refers to some measure of crime rate
-    and “Police” measures the number of cops in a city.)
+Selection bias! Some cities have more police because of more crime and
+other confounding factors!
 
-2.  How were the researchers from UPenn able to isolate this effect?
-    Briefly describe their approach and discuss their result in the
-    “Table 2” below, from the researchers’ paper.
+*2. How were the researchers from UPenn able to isolate this effect?
+Briefly describe their approach and discuss their result in the “Table
+2” below, from the researchers’ paper. *
 
-3.  Why did they have to control for Metro ridership? What was that
-    trying to capture?
+<figure>
+<img src="figures/ex3table2.png" style="width:50.0%" alt="Table 2" />
+<figcaption aria-hidden="true">Table 2</figcaption>
+</figure>
 
-4.  Below I am showing you “Table 4” from the researchers’ paper. Just
-    focus on the first column of the table. Can you describe the model
-    being estimated here? What is the conclusion?
+The researchers were able to isolate this effect through a natural
+experiment by observing changing in crime rate between ‘terrorist
+threat’ days and normal days. The intuition here is that terrorism
+threat status should be independent of day-to-day factors causing crime
+but WILL increase police presence in the city. In table2, we see the
+results on the experiment: that an increased police presence accounts
+for a decrease of ~6-7 crimes in the city, a result which is
+statistically significant at the .05 level.
+
+*3. Why did they have to control for Metro ridership? What was that
+trying to capture?*
+
+Here, metro ridership is presented as a proxy for foot-traffic in the
+city. In the regression above, `Log(midday ridership)` is offered as an
+omitted variable able to explain variation between crime rate and
+terrorist threat status. However, the `High Alert` value and
+significance is relatively unchanged with the addition of
+`Log(midday ridership)`, so we can conclude that variation in crime is
+likely caused by police presence and not by differences in pedestrian
+behavior.
+
+*4. Below I am showing you “Table 4” from the researchers’ paper. Just
+focus on the first column of the table. Can you describe the model being
+estimated here? What is the conclusion?*
+
+<img src="figures/ex3table4.png" style="width:50.0%" alt="Table 4" />
+Here, the authors partition their data to distinguish between district 1
+and all other districts. District 1 is a district of high government
+importance, and non-patrolling officers from across the city are
+directed here during periods of high alert. Our conclusion from the
+regression is that the majority of decline in crime during high alert
+periods is located in district 1, and that decreases in other parts of
+the city are not statistically significant. This aligns with the
+findings of the paper, since increase of police presence will be
+dedicated towards district 1, we expect this is where decrease of crime
+should occur IF more police -&gt; less crime.
 
 ## Tree modeling: dengue cases
 
-In this question, you will look at [dengue.csv](../data/dengue.csv),
-containing data on dengue fever in Latin America. This data was compiled
-by a group of students in spring 2017 for their course project. I’ll let
-them describe the data and the problem in their own words:
-
-> As one of the most prolific diseases in the world, dengue fever is a
-> mosquito-borne infection that affects almost half a billion people
-> every year. Mainly endangering the tropics, the fever at best causes
-> symptoms like vomiting and at worst can turn life-threatening.
-> Thousands die every year while researchers attempt to find the best
-> way to fight the pandemic. The disease first started to become
-> prevalent after World War II as mosquitoes were able to travel around
-> the world much easier than before. Since the disease can’t spread
-> directly between people, the spread of mosquitoes led to the spread of
-> dengue fever. Specifically, the Aegypti mosquito is the main vector
-> for the virus. Researchers understand this link and have turned their
-> attention to efforts like eliminating still water where mosquitoes
-> breed and encouraging residents to wear clothes that cover more of
-> their skin. If you want to stop dengue fever, you have to stop the
-> mosquitoes.
-
-> This dataset includes weekly information from two Latin American
-> cities: San Juan, Puerto Rico and Iquitos, Peru. Along with the number
-> of dengue fever cases each city encountered in the week, included are
-> various environmental measures that describe precipitation,
-> temperature, vegetation, and more. The variables are all intended to
-> be in some way related to how mosquitoes breed and spread. Studies
-> have shown that mosquitoes breed in hot, warm, and green areas. The
-> dataset includes complete data on over 1100 weeks from these two
-> cities in years between 1990 and 2010.
-
-Each row in the data set corresponds to a single week in a single city.
-The variables in the data set are as follows:  
-- total\_cases: Total recorded number of dengue fever cases that week.
-This is the outcome variable of interest in all regression models.  
-- city: City in which the data was recorded (sj = San Juan, Puerto Rico;
-iq = Iquitos, Peru)  
-- season: Season the data was recorded (spring, summer, fall, winter)  
-- specific\_humidity: Average specific humidity in grams of water per
-kilogram of air for the week. This is a raw measure of humidity based
-purely on how much water is in the air.  
-- tdtr\_k: Average Diurnal Temperature Range (DTR) for the week. DTR is
-the difference between the maximum and minimum temperature for a single
-day.  
-- precipitation\_amt: Rainfall for the week in millimeters
-
-There are a few other meteorological variables as well – feel free to
-use anything in the data set as a feature.
-
-Your task is to use *CART*, *random forests*, and *gradient-boosted
+*Your task is to use *CART*, *random forests*, and *gradient-boosted
 trees* to predict dengue cases (or log dengue cases – your choice, just
 explain) based on the features available in the data set. As we usually
 do, hold out some of the data as a testing set to quantify the
@@ -81,77 +65,52 @@ done *only* on the training data, with the testing data held as a final
 check to compare your best CART model vs. your best random forest model
 vs. your best boosted tree model.) Then, for whichever model has the
 better performance on the testing data, make three partial dependence
-plots:
+plots: *
 
--   specific\_humidity  
--   precipitation\_amt  
--   wild card/writer’s choice: you choose a feature that looks
-    interesting and make a partial dependence plot for that.
+*- specific\_humidity* *- precipitation\_amt* *- wild card/writer’s
+choice: you choose a feature that looks interesting and make a partial
+dependence plot for that.*
+
+We first impute the data with KNN method and scale all variables except
+the dependent one.
+
+Now we train the CART model with the training data and select the best
+parameters. Since the sample size is not big, we choose the default
+minsplit and use cv to choose the best cp
+![](excersises03_files/figure-markdown_strict/unnamed-chunk-3-1.png)
+
+From the plot, we choose cp to be 0.011 according to minimium criterion.
+Then we move to the random forest model. We choose the number of
+bootstrapped sample to be 2000 to avoid selection for n.trees. number of
+features is chosen using OOB method.
+![](excersises03_files/figure-markdown_strict/unnamed-chunk-4-1.png)
+
+From the plot, we choose mtry to be 5 according to the minimum
+criterion.
+
+Next, we consider the Gradient Boosting Decision Tree model (GBDT). Once
+again, we choose a large number of trees to avoid selection for n.trees.
+In addition to the standard choice of gaussian distribution, we choose a
+poisson distribution for y since the outcome total\_cases is a sum of
+count. Next we choose the interaction.depth and shrinkage by CV. We
+choose the default value for n.minobsinnode as 10 due to the small
+sample size, and because we don’t want each tree to go too deep which
+may lead to overfitting. (Here, the selection may take a long time. You
+can can just run the last two command)
+
+From our tuning result, for gaussian model, depth is 7 and shrinkage
+rate is 0.01; for poisson model, depth is 8 and shrinkage rate is 0.005.
+Then we use the test data to measure the performance for all these four
+models by RMSE.
+![](excersises03_files/figure-markdown_strict/unnamed-chunk-6-1.png) The
+plot shows our CART model has the lowest RMSE. Finally, we make 3
+partial dependence plots for CART model: specific\_humidity,
+precipitation\_amt and tdtr\_k.
+![](excersises03_files/figure-markdown_strict/unnamed-chunk-7-1.png)![](excersises03_files/figure-markdown_strict/unnamed-chunk-7-2.png)![](excersises03_files/figure-markdown_strict/unnamed-chunk-7-3.png)
 
 ## Predictive model building: green certification
 
-Consider the data set on green buildings in
-[greenbuildings.csv](../data/greenbuildings.csv), which we’ve examined
-before in the context of data visualization. This contains data on 7,894
-commercial rental properties from across the United States. Of these,
-685 properties have been awarded either LEED or EnergyStar certification
-as a green building. Here is a list of the variables:
-
--   CS.PropertyID: the building’s unique identifier in the database.  
--   cluster: an identifier for the building cluster, with each cluster
-    containing one green-certified building and at least one other
-    non-green-certified building within a quarter-mile radius of the
-    cluster center.  
--   size: the total square footage of available rental space in the
-    building.  
--   empl.gr: the year-on-year growth rate in employment in the
-    building’s geographic region.  
--   Rent: the rent charged to tenants in the building, in dollars per
-    square foot per calendar year.  
--   leasing.rate: a measure of occupancy; the fraction of the building’s
-    available space currently under lease.  
--   stories: the height of the building in stories.  
--   age: the age of the building in years.  
--   renovated: whether the building has undergone substantial
-    renovations during its lifetime.  
--   class.a, class.b: indicators for two classes of building quality
-    (the third is Class C). These are relative classifications within a
-    specific market. Class A buildings are generally the highest-quality
-    properties in a given market. Class B buildings are a notch down,
-    but still of reasonable quality. Class C buildings are the least
-    desirable properties in a given market.  
--   green.rating: an indicator for whether the building is either LEED-
-    or EnergyStar-certified.  
--   LEED, Energystar: indicators for the two specific kinds of green
-    certifications.  
--   net: an indicator as to whether the rent is quoted on a “net
-    contract” basis. Tenants with net-rental contracts pay their own
-    utility costs, which are otherwise included in the quoted rental
-    price.  
--   amenities: an indicator of whether at least one of the following
-    amenities is available on-site: bank, convenience store, dry
-    cleaner, restaurant, retail shops, fitness center.  
--   cd.total.07: number of cooling degree days in the building’s region
-    in 2007. A degree day is a measure of demand for energy; higher
-    values mean greater demand. Cooling degree days are measured
-    relative to a baseline outdoor temperature, below which a building
-    needs no cooling.  
--   hd.total07: number of heating degree days in the building’s region
-    in 2007. Heating degree days are also measured relative to a
-    baseline outdoor temperature, above which a building needs no
-    heating.  
--   total.dd.07: the total number of degree days (either heating or
-    cooling) in the building’s region in 2007.  
--   Precipitation: annual precipitation in inches in the building’s
-    geographic region.
--   Gas.Costs: a measure of how much natural gas costs in the building’s
-    geographic region.  
--   Electricity.Costs: a measure of how much electricity costs in the
-    building’s geographic region.  
--   City\_Market\_Rent: a measure of average rent per square-foot per
-    calendar year in the building’s local market.
-
-Your goal is to build the best predictive model possible for *revenue
+*Your goal is to build the best predictive model possible for *revenue
 per square foot per calendar year*, and to use this model to quantify
 the average change in rental income per square foot (whether in absolute
 or percentage terms) associated with green certification, holding other
@@ -160,60 +119,108 @@ partial dependence plot, depending on what model you work with here.)
 Note that revenue per square foot per year is the product of two terms:
 `rent` and `leasing_rate`! This reflects the fact that, for example,
 high-rent buildings with low occupancy may not actually bring in as much
-revenue as lower-rent buildings with higher occupancy.
+revenue as lower-rent buildings with higher occupancy. *
 
-You can choose whether to consider LEED and EnergyStar separately or to
-collapse them into a single “green certified” category. You can use any
-modeling approaches in your toolkit (regression, variable selection,
-trees, etc), and you should also feel free to do any feature engineering
-you think helps improve the model. Just make sure to explain what you’ve
-done.
+First, we build all of standard models with limited feature engineering
+and see which one does best out of the box! The feature engineering we
+did perform is excluding non-predictive columns as well as rent and
+lease rate to remove redundancy. We also remove any missing values and
+scale all features. The models constructed are: - linear regression -
+stepwise - lasso - KNN - descision tree - random forest - GBM - XGBoost
 
-Write a short report, no more than the equivalent of about 4 pages,
-detailing your methods, modeling choice, and conclusions.
+We compare these models by creating an 80% train/test split and forming
+predictions on the ‘test’ data set using above models trained using the
+‘train’ data set. For KNN and Lasso, we used CV to estimate optimal
+k/lambda. We then calculate RSME for each model:
+
+<figure>
+<img src="figures/Initial_model_comparison.png" alt="Table 4" />
+<figcaption aria-hidden="true">Table 4</figcaption>
+</figure>
+
+We see that, unsurprisingly, random forest and xgboost do the best out
+of box. We now turn to tuning those models to determine which is best.
+We use intuition to tune the xgboost model: increasing to
+`max_depth = 8` to make the the model more complex and increasing number
+of trees to `nrounds = 10000` to improve performance. Our final model is
+xgboost.
+
+![](excersises03_files/figure-markdown_strict/unnamed-chunk-9-1.png)
+
+    ## xgboost rsme: 789.7363
+
+In order to answer our principal question of whether or not a ‘green
+rating’ has a significant effect on building revenue we calculate a
+partial dependence plot for green\_rating vs predicted revenue per
+square foot using the pdp package. Note that since we scaled the
+features earlier, the green rating goes from -0.3083384 to 3.2427753
+instead of 0 to 1. Buildings with green certification (a green rating of
+1, which scaled to approximately 3.243) are predicted to generate more
+revenue per square foot than non-green certified buildings (a green
+rating of 0, which scaled to approximately -0.308).
+
+![](excersises03_files/figure-markdown_strict/unnamed-chunk-10-1.png)
+
+As shown, the categorical shift from green\_rating == 0 to green\_rating
+== 1 corresponds to roughly $100 of predicted revenue per sqft, all else
+held constant. Lets compare to the actual difference in revenue/sqft/yr,
+where other characteristics are not held constant.
+
+![](excersises03_files/figure-markdown_strict/unnamed-chunk-11-1.png)
+
+Indeed, here we can see on the same scale of axis that green buildings
+are much more profitable when we do not take underlying characteristics
+into consideration. This is doubtless due to the fact that buildings
+with green\_ratings == 1 are more likely to be nicer overall! Our chosen
+model, however, is able to parse out a far more accurate revenue
+increase of LEED or EnergyStar certifications as $100 revenue/sqft/yr.
+
+    ## xgboost rsme: 789.7363
 
 ## Predictive model building: California housing
 
-The data in [CAhousing.csv](../data/CAhousing.csv) containts data at the
-census-tract level on residential housing in the state of California.
-Each row is a [census tract](https://libguides.lib.msu.edu/tracts), and
-the columns are as follows:
-
--   longitude, latitude: coordinates of the geographic centroid of the
-    census tract  
--   housingMedianAge: median age in years of all residential households
-    in the census tract  
--   population: total population of the tract  
--   households: total number of households in the tract.  
--   totalRooms, totalBedrooms: total number of rooms and bedrooms for
-    households in the tract. NOTE: these are *totals*, not averages.
-    Consider standardizing by households.  
--   medianIncome: median household income in USD for all households in
-    the tract.  
--   medianHouseValue: median market value of all households in the
-    tract.
-
-Your task is to build the best predictive model you can for
+*Your task is to build the best predictive model you can for
 `medianHouseValue`, using the other available features. Write a short
 report detailing your methods. Make sure your report includes an
 estimate for the overall out-of-sample accuracy of your proposed model.
-Also include three figures:
+Also include three figures:*
 
--   a plot of the original data, using a color scale to show
-    medianHouseValue (or log medianHouseValue) versus longitude (x) and
-    latitude (y).  
--   a plot of your model’s predictions of medianHouseValue (or log
-    medianHouseValue) versus longitude (x) and latitude (y).  
--   a plot of your model’s errors/residuals (or log residuals) versus
-    longitude (x) and latitude (y).
+*- a plot of the original data, using a color scale to show
+medianHouseValue (or log medianHouseValue) versus longitude (x) and
+latitude (y). * *- a plot of your model’s predictions of
+medianHouseValue (or log medianHouseValue) versus longitude (x) and
+latitude (y). * *- a plot of your model’s errors/residuals (or log
+residuals) versus longitude (x) and latitude (y).*
 
-You can get nearly full credit (but not 100%) without a mapping package,
-i.e. just treating longitude and latitude as generic x/y coordinates.
-But a modest number of points will be reserved for those who can
-successfully show these plots in a visually pleasing fashion on an
-*actual map of California*. This will entail learning how to use an
-R/python package capable of making maps. (We haven’t covered this in
-class, but a major part of being a data scientist is learning how to use
-new software tools and libraries “on the fly” like this.) Consider
-`ggmap` as a good starting point, but you can use whatever R tools you
-want here.
+We first scale all data except the dependent variable and split the
+sample into train set and test set.
+
+Similar to last problem, we tried 6 models to predict the value for the
+median house value: a baseline linear model, lasso model with 2nd order
+interaction terms, KNN model, Random Forest model, GBDT model and
+XGBoost model. We first run the linear models.
+
+Then we look at the KNN model and random forest model. We use CV to
+choose the best k for KNN model. For random forest model, we use 1000
+trees and choose mtry as default.
+
+We explore 2 boosted tree models here, GBDT and XGboost model. We first
+look at the GBDT model. We use CV to select the best interaction depth
+and shrinkage rate. We set the n.trees as 1000 since we think it’s
+sufficient large and we set the distribution as gaussian. Since the
+sample size is small, we set the n.minobsinnode to be 10.
+
+Then we look at the XGBoost model. By CV we choose the these 3 best
+parameters: max\_depth, subsample and eta. After the cv selection, we
+run a loop through common parameter options to determine ‘best
+parameters’: max\_depth = 6 and nrounds = 10000.
+
+Now we compare the out-of-sample performance for all these 6 models. The
+plot shows our XGBoost model have the lowest RMSE so we are going to use
+this model for the following figures.
+
+![](excersises03_files/figure-markdown_strict/unnamed-chunk-18-1.png)![](excersises03_files/figure-markdown_strict/unnamed-chunk-18-2.png)![](excersises03_files/figure-markdown_strict/unnamed-chunk-18-3.png)![](excersises03_files/figure-markdown_strict/unnamed-chunk-18-4.png)
+
+It appears as though our model is best able to predict average housing
+prices, and struggles to predict especially low and high prices in the
+interior and coast, respectively. California is a land of extremes!

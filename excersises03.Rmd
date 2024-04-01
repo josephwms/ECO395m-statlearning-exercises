@@ -280,12 +280,23 @@ We see that, unsurprisingly, random forest and xgboost do the best out of box.  
 
 
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
+# # Random Forest
+# rf_model = randomForest(revenue ~ ., data = train_data, ntree = 1000)
+# 
+# # XGBoost
+# xgb_data = xgb.DMatrix(data = as.matrix(train_data[, -which(names(train_data) == "revenue")]), label = train_data$revenue)
+# params = list(booster = "gbtree", eta = 0.1, max_depth = 8, subsample = 0.7, colsample_bytree = 0.7, objective = "reg:squarederror")
+# xgb_model = xgb.train(params = params, data = xgb_data, nrounds = 10000, early_stopping_rounds = 10, watchlist = list(eval = xgb_data), verbose = 0)
+
 # Random Forest
 rf_model = randomForest(revenue ~ ., data = train_data, ntree = 1000)
 
+#GBM
+gbm_model = gbm(revenue ~ ., data = train_data, distribution = "gaussian", n.trees=1000, interaction.depth = 8, shrinkage = 0.1, n.minobsinnode = 10)
+
 # XGBoost
 xgb_data = xgb.DMatrix(data = as.matrix(train_data[, -which(names(train_data) == "revenue")]), label = train_data$revenue)
-params = list(booster = "gbtree", eta = 0.1, max_depth = 8, subsample = 0.7, colsample_bytree = 0.7, objective = "reg:squarederror")
+params = list(booster = "gbtree", eta = 0.01, max_depth = 6, subsample = 0.7, objective = "reg:squarederror")
 xgb_model = xgb.train(params = params, data = xgb_data, nrounds = 10000, early_stopping_rounds = 10, watchlist = list(eval = xgb_data), verbose = 0)
 
 # Prepare test data for prediction
@@ -302,7 +313,7 @@ actual = test_data$revenue
 #knn_predict = predict(knn_model, newdata = test_data)
 #dt_predict = predict(decision_tree_model, newdata = test_data, type = "vector")
 rf_predict = predict(rf_model, newdata = test_data)
-#gbm_predict = predict(gbm_model, newdata = test_data, n.trees = gbm_model$n.trees)
+gbm_predict = predict(gbm_model, newdata = test_data, n.trees = gbm_model$n.trees)
 xgb_predict = predict(xgb_model, newdata = test_matrix)
 
 #Calcuate RMSE for each model
@@ -313,14 +324,14 @@ xgb_predict = predict(xgb_model, newdata = test_matrix)
 #knn_rmse <- rmse(actual, knn_predict)
 #dt_rmse <- rmse(actual, dt_predict)
 rf_rmse <- rmse(actual, rf_predict)
-#gbm_rmse <- rmse(actual, gbm_predict)
+gbm_rmse <- rmse(actual, gbm_predict)
 xgb_rmse <- rmse(actual, xgb_predict)
 
 # Create a data frame
 rmse_values <- data.frame(
-   Model = c("rf", "xgb"),
-   RMSE = c(rf_rmse, xgb_rmse)
- )
+  Model = c("rf", "gbm", "xgb"),
+  RMSE = c(rf_rmse, gbm_rmse, xgb_rmse)
+)
 
 ggplot(rmse_values, aes(x = Model, y = RMSE)) +
   geom_col(width = 0.6) +

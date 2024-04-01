@@ -77,7 +77,7 @@ minsplit and use cv to choose the best cp
 
 From the plot, we choose cp to be 0.011 according to minimium criterion.
 Then we move to the random forest model. We choose the number of
-bootstrapped sample to be 2000 to avoid selection for n.trees. number of
+bootstrapped sample to be 2000 to avoid selection for n.trees. Number of
 features is chosen using OOB method.
 ![](excersises03_files/figure-markdown_strict/unnamed-chunk-4-1.png)
 

@@ -103,7 +103,10 @@ models by RMSE.
 The plot shows our CART model has the lowest RMSE. Finally, we make 3
 partial dependence plots for CART model: specific\_humidity,
 precipitation\_amt and tdtr\_k.
-![](excersises03_files/figure-markdown_strict/unnamed-chunk-7-1.png)![](excersises03_files/figure-markdown_strict/unnamed-chunk-7-2.png)![](excersises03_files/figure-markdown_strict/unnamed-chunk-7-3.png)
+
+![](excersises03_files/figure-markdown_strict/unnamed-chunk-7-1.png)
+![](excersises03_files/figure-markdown_strict/unnamed-chunk-7-2.png)
+![](excersises03_files/figure-markdown_strict/unnamed-chunk-7-3.png)
 
 ## Predictive model building: green certification
 

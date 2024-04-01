@@ -139,16 +139,16 @@ k/lambda. We then calculate RSME for each model:
 <figcaption aria-hidden="true">Table 4</figcaption>
 </figure>
 
-We see that, unsurprisingly, random forest and xgboost do the best out
-of box. We now turn to tuning those models to determine which is best.
-We use intuition to tune the xgboost model: increasing to
-`max_depth = 8` to make the the model more complex and increasing number
-of trees to `nrounds = 10000` to improve performance. Our final model is
-xgboost.
+We see that, unsurprisingly, gbm, random forest and xgboost do the best
+out of box. We now turn to tuning those models to determine which is
+best. We use intuition and cross validation to tune each tree model. For
+xgboost, we increase to `max_depth = 8` to make the the model more
+complex and increase number of trees to `nrounds = 10000` to improve
+performance. Our final model is xgboost.
 
 ![](excersises03_files/figure-markdown_strict/unnamed-chunk-9-1.png)
 
-    ## xgboost rsme: 789.7363
+    ## xgboost rsme: 813.0357
 
 In order to answer our principal question of whether or not a ‘green
 rating’ has a significant effect on building revenue we calculate a
@@ -194,13 +194,12 @@ residuals) versus longitude (x) and latitude (y).*
 We first scale all data except the dependent variable and split the
 sample into train set and test set. Similar to last problem, we tried 6
 models to predict the value for the median house value: a baseline
-linear model, lasso model with 2nd order interaction terms, KNN model,
-Random Forest model, GBDT model and XGBoost model. We first run the
-linear models.
+linear model, lasso model with 2nd order interaction terms, Random
+Forest model, GBDT model and XGBoost model. We first run the linear
+models.
 
-Then we look at the KNN model and random forest model. We use CV to
-choose the best k for KNN model. For random forest model, we use 1000
-trees and choose mtry as default.
+Then we look at Random forest model. We use 1000 trees and choose mtry
+as default.
 
 We explore 2 boosted tree models here, GBDT and XGboost model. Starting
 with GBDT, we use CV to select the best interaction depth and shrinkage
@@ -217,7 +216,9 @@ Now we compare the out-of-sample performance for all these 6 models. The
 plot shows our XGBoost model have the lowest RMSE so we are going to use
 this model for the following figures.
 
-![](excersises03_files/figure-markdown_strict/unnamed-chunk-18-1.png)![](excersises03_files/figure-markdown_strict/unnamed-chunk-18-2.png)![](excersises03_files/figure-markdown_strict/unnamed-chunk-18-3.png)![](excersises03_files/figure-markdown_strict/unnamed-chunk-18-4.png)
+![](excersises03_files/figure-markdown_strict/unnamed-chunk-18-1.png)
+
+![](excersises03_files/figure-markdown_strict/unnamed-chunk-20-1.png)![](excersises03_files/figure-markdown_strict/unnamed-chunk-20-2.png)![](excersises03_files/figure-markdown_strict/unnamed-chunk-20-3.png)
 
 It appears as though our model is best able to predict average housing
 prices, and struggles to predict especially low and high prices in the

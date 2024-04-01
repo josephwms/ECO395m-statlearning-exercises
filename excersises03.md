@@ -65,7 +65,7 @@ done *only* on the training data, with the testing data held as a final
 check to compare your best CART model vs. your best random forest model
 vs. your best boosted tree model.) Then, for whichever model has the
 better performance on the testing data, make three partial dependence
-plots: *
+plots:*
 
 *- specific\_humidity* *- precipitation\_amt* *- wild card/writer’s
 choice: you choose a feature that looks interesting and make a partial
@@ -119,7 +119,7 @@ partial dependence plot, depending on what model you work with here.)
 Note that revenue per square foot per year is the product of two terms:
 `rent` and `leasing_rate`! This reflects the fact that, for example,
 high-rent buildings with low occupancy may not actually bring in as much
-revenue as lower-rent buildings with higher occupancy. *
+revenue as lower-rent buildings with higher occupancy.*
 
 First, we build all of standard models with limited feature engineering
 and see which one does best out of the box! The feature engineering we
@@ -187,9 +187,9 @@ Also include three figures:*
 
 *- a plot of the original data, using a color scale to show
 medianHouseValue (or log medianHouseValue) versus longitude (x) and
-latitude (y). * *- a plot of your model’s predictions of
+latitude (y).* *- a plot of your model’s predictions of
 medianHouseValue (or log medianHouseValue) versus longitude (x) and
-latitude (y). * *- a plot of your model’s errors/residuals (or log
+latitude (y).* *- a plot of your model’s errors/residuals (or log
 residuals) versus longitude (x) and latitude (y).*
 
 We first scale all data except the dependent variable and split the

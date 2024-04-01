@@ -165,7 +165,7 @@ performance. Our final model is xgboost.
 
 In order to answer our principal question of whether or not a ‘green
 rating’ has a significant effect on building revenue we calculate a
-partial dependence plot for `green\_rating` vs predicted revenue/sqft/yr 
+partial dependence plot for `green_rating` vs predicted revenue/sqft/yr 
 using the pdp package. Note that since we scaled the
 features earlier, the green rating goes from -0.3083384 to 3.2427753
 instead of 0 to 1. Buildings with green certification (a green rating of
@@ -175,7 +175,7 @@ rating of 0, which scaled to approximately -0.308).
 
 ![](excersises03_files/figure-markdown_strict/unnamed-chunk-10-1.png)
 
-As shown, the categorical shift from `green\_rating == 0` to `green\_rating
+As shown, the categorical shift from `green_rating == 0` to `green_rating
 == 1` corresponds to roughly $100 of predicted revenue per sqft, all else
 held constant. Lets compare to the actual difference in revenue/sqft/yr,
 where other characteristics are not held constant.
@@ -185,7 +185,7 @@ where other characteristics are not held constant.
 Indeed, here we can see on the same scale of axis that green buildings
 are much more profitable when we do not take underlying characteristics
 into consideration. This is doubtless due to the fact that buildings
-with `green\_ratings == 1` are more likely to be nicer overall! Our chosen
+with `green_ratings == 1` are more likely to be nicer overall! Our chosen
 model, however, is able to parse out a far more accurate revenue
 increase of LEED or EnergyStar certifications as $100 revenue/sqft/yr.
 
@@ -219,7 +219,7 @@ we set the n.minobsinnode to be 10.
 Moving onto the XGBoost model, we choose the 3 best
 parameters using cross validation: max\_depth, subsample and eta. 
 After the cv selection, we run a loop through common parameter options 
-to determine ‘best parameters’: max\_depth = 6 and nrounds = 10000.
+to determine ‘best parameters’: max_depth = 6 and nrounds = 10000.
 
 Finally, we compare the out-of-sample performance for all 5 models. The
 plot shows our XGBoost model have the lowest RMSE.  Therefore, we use

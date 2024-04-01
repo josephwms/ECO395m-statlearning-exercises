@@ -67,10 +67,6 @@ vs. your best boosted tree model.) Then, for whichever model has the
 better performance on the testing data, make three partial dependence
 plots:*
 
-*- specific\_humidity* *- precipitation\_amt* *- wild card/writer’s
-choice: you choose a feature that looks interesting and make a partial
-dependence plot for that.*
-
 We first impute the data with KNN method and scale all variables except
 the dependent one.
 

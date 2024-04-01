@@ -3,7 +3,7 @@ title: 'ECO 395M: StatLearning Exercise 3'
 author: "Joseph Williams, Aahil Navroz, Qi Suqian"
 date: "`r Sys.Date()`"
 output:
-  md_document:
+  html_document:
 ---
 
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
@@ -87,7 +87,7 @@ data = data[, c(features, "revenue")]
 # Remove rows with any missing values (alternative: impute missing values)
 data = na.omit(data)
 
-# Scale your features, excluding the target variable
+# Scale your features, excluding the target variable and non_binary features
 data[features] = scale(data[features])
 
 # Split the data
@@ -95,40 +95,61 @@ train_index = createDataPartition(data$revenue, p = 0.8, list = FALSE)
 train_data = data[train_index, ]
 test_data = data[-train_index, ]
 
-# Model Training
+# # Model Training
+# #These are just base line models that require tuning 
+# 
+# # Linear Regression
+# lm_model = lm(revenue ~ ., data = train_data)
+# 
+# # Additional step-wise model
+# lm_step = step(lm_model, scope=~(.)^2)
+# 
+# #Lasso Regression
+# x_train = model.matrix(revenue ~ . - 1, data = train_data)
+# y_train = train_data$revenue
+# lasso_model = cv.glmnet(x_train, y_train, alpha = 1)
+# 
+# # KNN
+# trainControl_knn = trainControl(method = "cv", number = 10)
+# knn_model = train(revenue ~ ., data = train_data, method = "kknn",
+#                    trControl = trainControl_knn, tuneLength = 10)
+
+# # Decision tree
+# decision_tree_model = rpart(revenue ~ .,
+#                              data = train_data,
+#                              method = "anova",
+#                              control = rpart.control(cp = 0.001)) # Tuning parameter 'cp' for complexity
+# 
+# # GBM
+# gbm_model = gbm(revenue ~ ., data = train_data, distribution = "gaussian",
+#                  n.trees = 500, interaction.depth = 3, shrinkage = 0.05, cv.folds = 5, verbose = FALSE)
+
+#See code below for missing process flow
+
+##Code to generate below graphic
+# Create a data frame
+# rmse_values <- data.frame(
+#   Model = c("lm", "lm_step", "lasso", "knn", "dt", "rf", "gbm", "xgb"),
+#   RMSE = c(lm_rmse, lm_step_rmse, lasso_rmse, knn_rmse, dt_rmse, rf_rmse, gbm_rmse, xgb_rmse)
+# )
+
+# Plotting RMSE values for model comparison
+# barplot_heights = barplot(rmse_df, 
+#                            main = "RMSE Comparison Among Models", 
+#                            ylab = "RMSE Values",
+#                            las = 2, cex.names = 0.7)
 
 
-#These are just base line models that require tuning 
+```
 
-# Linear Regression
-lm_model = lm(revenue ~ ., data = train_data)
+![Table 4](figures/Initial_model_comparison.png)
 
-# Additional step-wise model
+We see that random forest and xgboost do the best out of box.  With some tuning, we are able to identify xgboost as our best possible model.
 
-lm_step = step(lm_model, scope=~(.)^2)
 
-# Lasso Regression
-x_train = model.matrix(revenue ~ . - 1, data = train_data)
-y_train = train_data$revenue
-lasso_model = cv.glmnet(x_train, y_train, alpha = 1)
-
-# KNN
-trainControl_knn = trainControl(method = "cv", number = 10)
-knn_model = train(revenue ~ ., data = train_data, method = "kknn",
-                   trControl = trainControl_knn, tuneLength = 10)
-
-# Decision tree
-decision_tree_model = rpart(revenue ~ ., 
-                             data = train_data, 
-                             method = "anova", 
-                             control = rpart.control(cp = 0.001)) # Tuning parameter 'cp' for complexity
-
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
 # Random Forest
 rf_model = randomForest(revenue ~ ., data = train_data, ntree = 1000)
-
-# GBM
-gbm_model = gbm(revenue ~ ., data = train_data, distribution = "gaussian",
-                 n.trees = 500, interaction.depth = 3, shrinkage = 0.05, cv.folds = 5, verbose = FALSE)
 
 # XGBoost
 xgb_data = xgb.DMatrix(data = as.matrix(train_data[, -which(names(train_data) == "revenue")]), label = train_data$revenue)
@@ -140,38 +161,46 @@ x_test = model.matrix(revenue ~ . - 1, data = test_data)
 test_matrix = xgb.DMatrix(data = as.matrix(test_data[, -which(names(test_data) == "revenue")]))
 
 # Generate predictions
-lm_predict = predict(lm_model, newdata = test_data)
-lm_step_predict = predict(lm_step, newdata = test_data)
-lasso_predict = predict(lasso_model, newx = x_test, s = "lambda.min")
-knn_predict = predict(knn_model, newdata = test_data)
-dt_predict = predict(decision_tree_model, newdata = test_data, type = "vector")
+#lm_predict = predict(lm_model, newdata = test_data)
+#lm_step_predict = predict(lm_step, newdata = test_data)
+#lasso_predict = predict(lasso_model, newx = x_test, s = "lambda.min")
+#knn_predict = predict(knn_model, newdata = test_data)
+#dt_predict = predict(decision_tree_model, newdata = test_data, type = "vector")
 rf_predict = predict(rf_model, newdata = test_data)
-gbm_predict = predict(gbm_model, newdata = test_data, n.trees = gbm_model$n.trees)
+#gbm_predict = predict(gbm_model, newdata = test_data, n.trees = gbm_model$n.trees)
 xgb_predict = predict(xgb_model, newdata = test_matrix)
 
-# Calculate RMSE for each model
-actual = test_data$revenue
-rmse_values = c(
-  lm_rmse = rmse(actual, lm_predict),
-  lm_step_rmse = rmse(actual, lm_step_predict),
-  lasso_rmse = rmse(actual, lasso_predict),
-  knn_rmse = rmse(actual, knn_predict),
-  dt_model =  rmse(actual, dt_predict),
-  rf_rmse = rmse(actual, rf_predict),
-  gbm_rmse = rmse(actual, gbm_predict),
-  xgb_rmse = rmse(actual, xgb_predict)
-)
+#Calcuate RMSE for each model
 
-print(rmse_values)
+#lm_rmse <- rmse(actual, lm_predict)
+#lm_step_rmse <- rmse(actual, lm_step_predict)
+lasso_rmse <- rmse(actual, lasso_predict)
+#knn_rmse <- rmse(actual, knn_predict)
+#dt_rmse <- rmse(actual, dt_predict)
+rf_rmse <- rmse(actual, rf_predict)
+#gbm_rmse <- rmse(actual, gbm_predict)
+xgb_rmse <- rmse(actual, xgb_predict)
 
-# Plotting RMSE values for model comparison
-barplot_heights = barplot(rmse_values, 
-                           main = "RMSE Comparison Among Models", 
-                           ylab = "RMSE Values",
-                           las = 2, cex.names = 0.7)
+# Create a data frame
+rmse_values <- data.frame(
+   Model = c("rf", "xgb"),
+   RMSE = c(rf_rmse, xgb_rmse)
+ )
+
+ggplot(rmse_values, aes(x = Model, y = RMSE)) +
+  geom_col(width = 0.6) +
+  coord_cartesian(ylim = c(500, max(rmse_values$RMSE) * 1.1)) +
+  ggtitle("RMSE Comparison Among Models")
+
+# Print the minimum lambda value used
+cat("xgboost rsme:", xgb_rmse)
+
+```
+
+In order to answer our principal question of whether or not a 'green rating' has a significant effect on building revenue we calculate a partial dependence plot for green_rating vs revenue.
 
 
-
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
 # Assuming 'green_rating' is a binary variable for this example.
 # If it's continuous or has more levels, adjust 'green_rating_grid' accordingly.
 green_rating_grid <- unique(train_data$green_rating)
@@ -196,16 +225,15 @@ for (i in seq_along(green_rating_grid)) {
 plot_data <- data.frame(green_rating = green_rating_grid, average_pred = average_preds)
 
 # Plot
-ggplot(plot_data, aes(x = green_rating, y = average_pred)) +
+green_plot = ggplot(plot_data, aes(x = green_rating, y = average_pred)) +
   geom_line() +
   geom_point() +
   xlab("Green Rating") +
   ylab("Average Predicted Revenue")
 
-average_preds
+#average_preds
 
 # This is a graph that depicts the average revenue per foot based on a property's green certification status. Note that since we scaled the features earlier, the green rating goes from -0.3083384 to 3.2427753 instead of 0 to 1. Buildings with green certification (a green rating of 1, which scaled to approximately 3.243) are predicted to generate more revenue per square foot than non-green certified buildings (a green rating of 0, which scaled to approximately -0.308).The difference in predicted revenue between the two categories (green certified and non-green certified) is roughly 2488.989 − 2391.716 = 97.273. This would be the estimated additional revenue per square foot attributed to having a green certification, according to the model's predictions. 
-
 ```
 
 

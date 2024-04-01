@@ -614,10 +614,6 @@ test_ca$predictedMedianHouseValue = predict(lm_model, newdata = test_ca)
 # Step 2: Calculate residuals
 test_ca$residuals = test_ca$medianHouseValue - test_ca$predictedMedianHouseValue
 
-# Step 3: Merge predictions and residuals with the original unscaled test data
-
-test_ca_plot$predictedMedianHouseValue = test_ca$predictedMedianHouseValue
-test_ca_plot$residuals = test_ca$residuals
 
 # Plot the model's predictions
 ggplot() +

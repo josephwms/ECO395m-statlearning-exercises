@@ -98,8 +98,9 @@ From our tuning result, for gaussian model, depth is 7 and shrinkage
 rate is 0.01; for poisson model, depth is 8 and shrinkage rate is 0.005.
 Then we use the test data to measure the performance for all these four
 models by RMSE.
-![](excersises03_files/figure-markdown_strict/unnamed-chunk-6-1.png) The
-plot shows our CART model has the lowest RMSE. Finally, we make 3
+![](excersises03_files/figure-markdown_strict/unnamed-chunk-6-1.png) 
+
+The plot shows our CART model has the lowest RMSE. Finally, we make 3
 partial dependence plots for CART model: specific\_humidity,
 precipitation\_amt and tdtr\_k.
 ![](excersises03_files/figure-markdown_strict/unnamed-chunk-7-1.png)![](excersises03_files/figure-markdown_strict/unnamed-chunk-7-2.png)![](excersises03_files/figure-markdown_strict/unnamed-chunk-7-3.png)

@@ -1,6 +1,6 @@
 # ECO 395M: StatLearning Exercise 3
 ## Author: Joseph Williams, Aahil Navroz, Qi Suqian
-### Date: `r format(Sys.Date(), "%Y-%m-%d")`
+### Date: 04/01/2023
 
 
 ## What causes what?

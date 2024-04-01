@@ -107,7 +107,7 @@ lm_model = lm(revenue ~ ., data = train_data)
 
 # Additional step-wise model
 
-lm_step = step(lm_model, scope=~(.)^2)
+#lm_step = step(lm_model, scope=~(.)^2)
 
 # Lasso Regression
 x_train = model.matrix(revenue ~ . - 1, data = train_data)
@@ -116,8 +116,8 @@ lasso_model = cv.glmnet(x_train, y_train, alpha = 1)
 
 # KNN
 trainControl_knn = trainControl(method = "cv", number = 10)
-knn_model = train(revenue ~ ., data = train_data, method = "kknn",
-                   trControl = trainControl_knn, tuneLength = 10)
+#knn_model = train(revenue ~ ., data = train_data, method = "kknn",
+#                   trControl = trainControl_knn, tuneLength = 10)
 
 # Decision tree
 decision_tree_model = rpart(revenue ~ ., 
@@ -145,36 +145,48 @@ test_matrix = xgb.DMatrix(data = as.matrix(test_data[, -which(names(test_data) =
 
 # Generate predictions
 lm_predict = predict(lm_model, newdata = test_data)
-lm_step_predict = predict(lm_step, newdata = test_data)
+#lm_step_predict = predict(lm_step, newdata = test_data)
 lasso_predict = predict(lasso_model, newx = x_test, s = "lambda.min")
-knn_predict = predict(knn_model, newdata = test_data)
+#knn_predict = predict(knn_model, newdata = test_data)
 dt_predict = predict(decision_tree_model, newdata = test_data, type = "vector")
 rf_predict = predict(rf_model, newdata = test_data)
 gbm_predict = predict(gbm_model, newdata = test_data, n.trees = gbm_model$n.trees)
 xgb_predict = predict(xgb_model, newdata = test_matrix)
 
-# Calculate RMSE for each model
-actual = test_data$revenue
-rmse_values = c(
-  lm_rmse = rmse(actual, lm_predict),
-  lm_step_rmse = rmse(actual, lm_step_predict),
-  lasso_rmse = rmse(actual, lasso_predict),
-  knn_rmse = rmse(actual, knn_predict),
-  dt_model =  rmse(actual, dt_predict),
-  rf_rmse = rmse(actual, rf_predict),
-  gbm_rmse = rmse(actual, gbm_predict),
-  xgb_rmse = rmse(actual, xgb_predict)
-)
+#Calcuate RMSE for each model
 
-print(rmse_values)
+lm_rmse <- rmse(actual, lm_predict)
+#lm_step_rmse <- rmse(actual, lm_step_predict)
+lasso_rmse <- rmse(actual, lasso_predict)
+#knn_rmse <- rmse(actual, knn_predict)
+dt_rmse <- rmse(actual, dt_predict)
+rf_rmse <- rmse(actual, rf_predict)
+gbm_rmse <- rmse(actual, gbm_predict)
+xgb_rmse <- rmse(actual, xgb_predict)
+
+# Create a data frame
+# rmse_values <- data.frame(
+#   Model = c("lm", "lm_step", "lasso", "knn", "dt", "rf", "gbm", "xgb"),
+#   RMSE = c(lm_rmse, lm_step_rmse, lasso_rmse, knn_rmse, dt_rmse, rf_rmse, gbm_rmse, xgb_rmse)
+# )
 
 # Plotting RMSE values for model comparison
-barplot_heights = barplot(rmse_values, 
-                           main = "RMSE Comparison Among Models", 
-                           ylab = "RMSE Values",
-                           las = 2, cex.names = 0.7)
+# barplot_heights = barplot(rmse_df, 
+#                            main = "RMSE Comparison Among Models", 
+#                            ylab = "RMSE Values",
+#                            las = 2, cex.names = 0.7)
 
+
+# rmse_plot = ggplot(rmse_values, aes(x=Model, y=RMSE)) +
+#   geom_col() +
+#   ggtitle("RMSE Comparison Among Models") + 
+#   coord_cartesian(ylim = c(500, 1300)) +
+#   theme_minimal()
+# rmse_plot
 ```
+
+![Table 4](figures/Initial_model_comparison.png)
+
 
 
 ## Predictive model building: California housing

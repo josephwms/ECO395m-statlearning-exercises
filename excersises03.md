@@ -1,6 +1,6 @@
 # ECO 395M: StatLearning Exercise 3
 ## Author: Joseph Williams, Aahil Navroz, Qi Suqian
-### Date: 04/01/2023
+### 04/01/2023
 
 
 ## What causes what?

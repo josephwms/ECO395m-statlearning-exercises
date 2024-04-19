@@ -1,3 +1,9 @@
+# ECO 395M: StatLearning Exercise 3
+
+#### Joseph Williams, Aahil Navroz, Qi Suqian
+
+#### 04/22/2023
+
 ## Clustering and PCA
 
 ![](exercises04_files/figure-markdown_strict/unnamed-chunk-1-1.png)![](exercises04_files/figure-markdown_strict/unnamed-chunk-1-2.png)

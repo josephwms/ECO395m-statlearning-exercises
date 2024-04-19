@@ -27,7 +27,7 @@ correlation within the following groups:
 -   group2\_collegeboy: `college_uni`, `online_gaming`, `sports_playing`
 -   group3\_fashionable: `beauty`, `cooking`, `fashion`
 -   group4\_yuppie: `personal_fitness`, `health_nutrition`, `outdoors`
--   group5\_neolib: `politics`, `travel`, `computers`
+-   group5\_neoliberal: `politics`, `travel`, `computers`
 -   group6\_socialyte: `shopping`, `chatter`, `photo_sharing`
 
 Lets organize counts to see how many followers had at least two or more
@@ -96,9 +96,9 @@ we notice the following points:
 
 Altogether, its clear that K=6 weeds out the most spam posts and
 maintains an even distribution between the other categories, a key
-requirement of clustering. Most importantly, it aligns with our
-intuition. Next, our key insights will rely on K-means clustering using
-K=6 and identify five distinct non-spam groups.
+requirement of clustering. Most importantly, it aligns incredibly well
+with our opening analysis. Next, our key insights will rely on K-means
+clustering using K=6 and identify five distinct non-spam groups.
 
 ##### Insights & Recommended Steps
 

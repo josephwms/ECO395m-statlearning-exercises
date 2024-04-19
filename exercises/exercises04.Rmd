@@ -57,7 +57,7 @@ Great! So already we're seeing some clusters.  I notice see two way correlation 
 * group2_collegeboy: `college_uni`, `online_gaming`, `sports_playing`
 * group3_fashionable: `beauty`, `cooking`, `fashion`
 * group4_yuppie: `personal_fitness`, `health_nutrition`, `outdoors`
-* group5_neolib: `politics`, `travel`, `computers`
+* group5_neoliberal: `politics`, `travel`, `computers`
 * group6_socialyte: `shopping`, `chatter`, `photo_sharing`
 
 Lets organize counts to see how many followers had at least two or more tweets in at least 2, (or 3 for family_values and socialyte) variables of each cluster.  Lets also filter out users who are in more than 3 of these respective groups to eliminate generalists and get a better personality portrait of our followers.
@@ -209,7 +209,7 @@ We are able to confirm using unsupervised learning pretty much the same clusters
 - K=5 splits up our 'fashionable' and 'socialyte' clusters between the four non-spam groups, so that the only major feature of one of the clusters is `photo_sharing`.  
 - K=6,7 recovers the 'fashionable' cluster, and some of the 'socialyte' cluster. Its likely that the 'socialyte' characteristics `shopping`, `chatter` and `photo sharing` represent popular uses of Twitter which are more easily distributed between users in other categories.
 
-Altogether, its clear that K=6 weeds out the most spam posts and maintains an even distribution between the other categories, a key requirement of clustering. Most importantly, it aligns with our intuition. Next, our key insights will rely on K-means clustering using K=6 and identify five distinct non-spam groups.
+Altogether, its clear that K=6 weeds out the most spam posts and maintains an even distribution between the other categories, a key requirement of clustering. Most importantly, it aligns incredibly well with our opening analysis. Next, our key insights will rely on K-means clustering using K=6 and identify five distinct non-spam groups.
 
 
 ##### Insights & Recommended Steps

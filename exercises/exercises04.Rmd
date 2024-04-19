@@ -47,6 +47,7 @@ ggcorrplot(cor(features),
 ```
 
 Great! So already we're seeing some clusters.  I notice see two way correlation within the following groups: 
+
 * group1_familyvalues: `parenting`, `religion`, `sports_fandom`, `food`, `school`, `family`
 * group2_collegeboy: `college_uni`, `online_gaming`, `sports_playing`
 * group3_fashionable: `beauty`, `cooking`, `fashion`
@@ -120,7 +121,7 @@ ggplot(group_counts1, aes(x = group, y = user_count)) +
 #   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
-Over 1500 users are in the loosely constructed `familyvalues', 'yuppie', and 'socialyte' groups, respectively.  Even with filtering efforts, however, many users are likely counted 2 or even 3 times. Before we go farther in this direction, lets shift to machine learning algorithms so that our clusters are definite and exhaustive.  We'll start with k-means and k_means++ clustering with k=5-7 clusters, since we see 6 key groups off the bat. 
+Over 1500 users are in the loosely constructed `familyvalues', 'yuppie', and 'socialyte' groups, respectively.  Even with filtering efforts, however, many users are likely counted 2 or even 3 times. Before we go farther in this direction, lets shift to machine learning algorithms so that our clusters are definite and exhaustive.  We'll start with K-means and K_means++ clustering with K=5-7 clusters, since we see 6 key groups off the bat.  See below visualizations and counts per cluster.
 
 
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
@@ -140,7 +141,7 @@ ft = scale(ft, center=TRUE, scale=TRUE)
 
 # Execute kmeans
 set.seed(1)
-k_values <- c(5, 6, 7)
+k_values <- c(5, 7, 6)
 
 for (k in k_values) {
   clust = kmeans(ft, k, nstart=50)
@@ -149,9 +150,9 @@ for (k in k_values) {
   centroids <- round(clust$centers, 2)
   
   #return cluster data for k=6
-  if (k==6){
-    print(centroids)
-  }
+  # if (k==6){
+  #   print(centroids)
+  # }
     
   
   # Convert centroids to a dataframe
@@ -186,9 +187,9 @@ for (k in k_values) {
   cluster_counts <- as.data.frame(table(clust$cluster))
   colnames(cluster_counts) <- c("Cluster", "Users")
   
-  print(cluster_counts)
-  print(pie_plots)
   
+  print(pie_plots)
+  print(cluster_counts)
   
 }
 
@@ -197,22 +198,23 @@ for (k in k_values) {
 
 ```
 
-We are able to confirm using unsupervised learning pretty much the same clusters we identified using intuition and basic tools. Labeled variables have centroid values over a certain, relatively-high threshold.  Our results use standard K-means but we've verified that results are repeatable with K-means++ start up. 
+We are able to confirm using unsupervised learning pretty much the same clusters we identified using intuition and basic tools. Labeled variables have centroid values over a certain, relatively-high threshold.  Our results use standard K-means but we've verified that results are repeatable with K-means++ start up. Regarding selection of K we notice the following points:
 
-As to selection of K we notice the following points:
-- Each K value identifies a 'spam' category where no variables are dominant
+- Each K identifies a 'spam' category where no variables are dominant.
 - K=5 splits up our 'fashionable' and 'socialyte' clusters between the four non-spam groups, so that the only major feature of one of the clusters is `photo_sharing`.  
 - K=6,7 recovers the 'fashionable' cluster, and some of the 'socialyte' cluster. Its likely that the 'socialyte' characteristics `shopping`, `chatter` and `photo sharing` represent popular uses of Twitter which are more easily distributed between users in other categories.
 
-Altogether, its clear that K=6 weeds out the most spam posts and maintains an even distribution between the other categories, a key requirement of clustering. Most importantly, it aligns with our intuition. Our findings will rely on K-means clustering using K=6 and identify five distinct non-spam groups.
+Altogether, its clear that K=6 weeds out the most spam posts and maintains an even distribution between the other categories, a key requirement of clustering. Most importantly, it aligns with our intuition. Next, our key insights will rely on K-means clustering using K=6 and identify five distinct non-spam groups.
 
 
-#### Insights
+##### Insights & Recommended Steps
 We've identified 5 roughly even-sized market segments.  Here are the two largest in descending order:
-- **Health-conscious adults (likely mid-twenties to thirties)**. In my city we call these yoga enthusiasts and REI shoppers 'yuppies', short for 'young professionals'.  This market segment shared twitter engagement in `health_nutrition`, `personal_fitness`, `outdoors`.  While not included in our graphic. This segment also showed notable interest for `eco`.  We recommend an approach that shows sustainability efforts, and connects your product to outdoor engagmeent and mental health.
-- **Traditional Americans**. Don't forget about the heartland, the silent majority. Your minivan moms and sports bar dads. This market segment showed over-threshold engagement with more categories than any other group, by far, indicating they are 'classic American consumers,' not part of any niche group.  key characteristics align with traditional values, and include `family`, `food`, `religion`, `sports fandom`, `school`, `parenting`. To appeal to this group, show that your product could easily find its way to a children's soccer game or family reunion.
 
-To appeal to both groups and maximize market outreach,perhaps you are the beverage of choice for the modern parent... but not *too* modern. Perhaps its being consumed on a good ol' fashioned camping trip. Don't forget to put ice in the cooler!
+- **Health-conscious adults (likely mid-twenties to thirties)**. In my city we call these yoga enthusiasts and REI shoppers 'yuppies', short for 'young professionals'.  This market segment shared twitter engagement in `health_nutrition`, `personal_fitness`, `outdoors`.  This segment also showed notable interest for `eco`, though it did not meet the display threshold.  We recommend an approach that shows sustainability efforts, and connects your product to outdoor engagement and mental health.
+
+- **Traditional Americans**. Don't forget about the heartland, the silent majority, your minivan moms and sports bar dads. This market segment showed over-threshold engagement with more categories than any other group, by far, indicating they are 'classic American' consumers- not part of any niche group.  Key characteristics align with traditional values, and include `family`, `food`, `religion`, `sports fandom`, `school` and `parenting`. To appeal to this group, show that your product could easily find its way to a children's soccer game or family reunion.
+
+Overall, to appeal to both groups and maximize market outreach, perhaps you are the beverage of choice for the modern parent... but not *too* modern. Perhaps its being consumed on a good ol' fashioned camping trip. Don't forget to put ice in the cooler!
 
 
 

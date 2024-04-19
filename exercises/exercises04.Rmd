@@ -212,7 +212,7 @@ We are able to confirm using unsupervised learning pretty much the same clusters
 Altogether, its clear that K=6 weeds out the most spam posts and maintains an even distribution between the other categories, a key requirement of clustering. Most importantly, it aligns incredibly well with our opening analysis. Next, our key insights will rely on K-means clustering using K=6 and identify five distinct non-spam groups.
 
 
-##### Insights & Recommended Steps
+#### Insights & Recommended Steps
 We've identified 5 roughly even-sized market segments.  Here are the two largest in descending order:
 
 - **Health-conscious adults (likely mid-twenties to thirties)**. In my city we call these yoga enthusiasts and REI shoppers 'yuppies', short for 'young professionals'.  This market segment shared twitter engagement in `health_nutrition`, `personal_fitness`, `outdoors`.  This segment also showed notable interest for `eco`, though it did not meet the display threshold.  We recommend an approach that shows sustainability efforts, and connects your product to outdoor engagement and mental health.

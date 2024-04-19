@@ -100,7 +100,7 @@ requirement of clustering. Most importantly, it aligns incredibly well
 with our opening analysis. Next, our key insights will rely on K-means
 clustering using K=6 and identify five distinct non-spam groups.
 
-##### Insights & Recommended Steps
+#### Insights & Recommended Steps
 
 We’ve identified 5 roughly even-sized market segments. Here are the two
 largest in descending order:

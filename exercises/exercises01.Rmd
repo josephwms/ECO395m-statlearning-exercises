@@ -1,0 +1,437 @@
+---
+title: 'ECO 395M: StatLearning Exercise 1'
+author: "Joseph Williams, Aahil Navroz, Suqian Qi"
+date: "`r Sys.Date()`"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+library(class)
+library(rsample)
+library(caret)
+```
+
+## 1) Data visualization: flights at ABIA
+
+For this question we wanted to help fliers (say fliers in 2009) build intuition or 'rules of thumb' they can use when choosing between airline companies. To begin we want the data to correspond to recognizable names, so we mapped UniqueCarrier to airline brands or their parent brands.  Here's a breakdown of which major carriers are running the most flights out of ABIA.
+
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+abia_data = read.csv('./data/ABIA.csv', header = TRUE)
+
+#Mapping to tie airlines to carrier codes
+carrier_lookup = data.frame(
+  UniqueCarrier = sort(unique(abia_data$UniqueCarrier)),
+  Airline = c("Pinnacle", "American", "JetBlue", "North-Western", "Delta", "Alaska", "Frontier", "American", "Celeste", "American", "SkyWest", "United", "SilkAir", "Southwest", "JSX", "United")
+)
+
+#Merge code to airline name
+abia_data = merge(abia_data, carrier_lookup, by = "UniqueCarrier")
+
+#Lets check using airline == Southwest
+data_check = abia_data %>% 
+  select(UniqueCarrier, Airline) %>% 
+  filter(Airline == "Southwest")
+
+#Lets see what the most popular major airlines are
+main_airlines = c("United", "Southwest", "JetBlue", "Delta", "American", "Frontier")
+
+flights_by_airline = abia_data %>% 
+  filter(Airline %in% main_airlines) %>%
+  group_by(Airline) %>%
+  summarize(TotalFlights = n())
+
+
+# Use scale_fill_manual() with the vector of colors
+ggplot(flights_by_airline, aes(x = Airline, y = TotalFlights, fill = Airline)) +
+  geom_col() +
+  labs(title = "Total Flights by Major Airline",
+       x = "Airline",
+       y = "Flights") +
+  theme_minimal()
+
+```
+
+
+Looks like American and Southwest are king... but can they handle the volume!?  Lets look at arrival delays for each company. Given these are arrival delays for flights coming into and out of Austin, overall it will be a fine measure for the timeliness of the airline.
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+
+# Converting DepTime to hour of the day
+abia_data$DepHour = floor(abia_data$DepTime / 100)
+
+# Calculate average departure delays by airline and hour
+avg_delays = abia_data %>%
+  filter(Airline %in% main_airlines) %>%
+  group_by(Airline, DepHour) %>%
+  summarize(AvgArrDelay = mean(ArrDelay, na.rm = TRUE))
+
+# Plotting average Arrival delay by airline across different hours of the day 
+ggplot(avg_delays, aes(x = DepHour, y = AvgArrDelay, color = Airline)) +
+  geom_line() +
+  geom_point() +
+  facet_wrap(~Airline, scales = "fixed", ncol = 3) + 
+  theme_minimal() +
+  labs(title = "Average Arrival Delays by Airline and Hour",
+       x = "Hour of Day",
+       y = "Average Delay (Min)") +
+  scale_x_continuous(breaks = seq(0, 24, by = 6)) + 
+  theme(legend.position = "none")
+
+```
+
+Okay, we're seeing some detail here.  Seems like most companies experience their delays before the hour of 6am.  Since we're looking for rules of thumb.  Lets classify into 'Red Eye' 'Early Morning', '9-5' and 'Evening-Night', and see if we can quantify delay times over periods, rather than specific times.  Some of these averages seem too high, too, lets remove observations where ArrDelay is more than 4 hours, since that usually results in a changed flight for me.
+
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+
+abia_data$DepHour = as.integer(abia_data$DepHour)
+#missing_values = sum(is.na(abia_data$DepHour))
+#print(missing_values)
+
+abia_data = abia_data[complete.cases(abia_data$DepHour), ]
+abia_data = abia_data %>% filter(DepDelay <= 240)
+
+classify_hour = function(hour) {
+  ifelse((hour >= 22 & hour < 24) | (hour >= 0 & hour < 2), "Red-Eye",
+         ifelse(hour >= 2 & hour < 9, "Morning",
+                ifelse(hour >= 9 & hour < 17, "9-5", "Evening-Night")))
+}
+
+abia_data = abia_data %>% 
+  mutate(Period = classify_hour(DepHour))
+
+
+avg_delays_period = abia_data %>%
+  filter(Airline %in% main_airlines) %>%
+  mutate(WeatherDelay = coalesce(WeatherDelay, 0)) %>%
+  mutate(SecurityDelay = coalesce(SecurityDelay, 0)) %>%
+  mutate(NASDelay = coalesce(NASDelay, 0)) %>%
+  group_by(Airline, Period) %>%
+  summarize(AvgArrDelay = mean(ArrDelay, na.rm = TRUE))
+
+#summarize(AvgArrDelay = mean(ArrDelay - WeatherDelay - SecurityDelay - NASDelay, na.rm = TRUE))
+
+# Define the desired order of the levels for the "Period" variable
+desired_order = c("Morning", "9-5", "Evening-Night", "Red-Eye")
+
+# Reorder the levels of the "Period" variable
+avg_delays_period = avg_delays_period %>%
+  mutate(Period = factor(Period, levels = desired_order))
+
+ggplot(avg_delays_period, aes(x = Period, y = AvgArrDelay, fill = Airline)) +
+  geom_col() +
+  facet_wrap(~Airline, scales = "fixed", ncol = 3) + 
+  theme_minimal() +
+  labs(title = "Average Arrival Delays by Airline and Period",
+       x = "Period",
+       y = "Average Delay (Min)") + 
+theme(legend.position = "none", axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+Okay now this is more useful!  Let's see, if cost difference is minimal and its important that my flight goes smoothly, I am brand-indifferent for Morning and 9-5 flights, prefer Frontier for night flights, and will only fly United or American for red-eyes.  Lets dig a little deeper to see where these delays are coming from.  Perhaps we can gain even more insight about the airlines.
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+# See what is the main reason for delay for main airlines. Delete the cancelled airlines and miss data
+temp = abia_data %>%
+  filter(Cancelled < 1)
+
+temp = temp %>%
+  filter(!is.na(CarrierDelay) & !is.na(WeatherDelay) & !is.na(NASDelay) & !is.na(SecurityDelay) & !is.na(LateAircraftDelay))
+
+temp = temp %>% 
+  filter(Airline %in% main_airlines)
+
+
+
+# summarize the frequency for each reason 
+# delay_reason_fre = temp %>%
+#   group_by(Airline) %>%
+#   mutate(across(c(CarrierDelay, WeatherDelay, NASDelay, SecurityDelay, LateAircraftDelay), ~sum(. != 0)))
+# 
+# delay_reason_fre = delay_reason_fre %>%
+#   select(Airline, CarrierDelay, WeatherDelay, NASDelay, SecurityDelay, LateAircraftDelay) %>%
+#   distinct() 
+# 
+# delay_reason_fre_long = tidyr::pivot_longer(delay_reason_fre, cols = c(CarrierDelay, WeatherDelay, NASDelay, SecurityDelay, LateAircraftDelay), names_to = "Variable")
+# 
+# ggplot(delay_reason_fre_long, aes(x = Variable, y = value, fill = Variable)) +
+#   geom_bar(stat = "identity", position = "dodge", alpha = 0.7) +
+#   labs(title = "Frequency of Arrival Delays by Reason and Airline",
+#        x = "Reason",
+#        y = "Count") + 
+#   theme(legend.position = "none", axis.text.x = element_text(angle = 60, hjust = 1)) +
+#   facet_wrap(~ Airline, scales = "free")
+```
+
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+# ggplot(delay_reason_fre_long, aes(x = Variable, y = value, fill = Variable)) +
+#   geom_bar(stat = "identity", position = "dodge", alpha = 0.7) +
+#   labs(title = "Frequency of Arrival Delays by Reason",
+#        x = "Reason",
+#        y = "Count") + 
+#   theme(legend.position = "none", axis.text.x = element_text(angle = 60, hjust = 1))
+```
+
+Here, we summarize arrival delay by delay reason to confirm earlier results.  CarrierDelay and LateAircraftDelay are classified as 'AirlineDelay' and WeatherDelay, SecurityDelay, and NASDelay are classified as 'OtherDelay'.  We want to see what percentage of the posted delays are actaully the airline's fault!
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+# Calculate the percentage of each delay reason to the total arrival delay
+# delay_summarized = temp %>%
+#   group_by(Airline) %>%
+#   summarise(across(c('CarrierDelay', 'WeatherDelay', 'NASDelay', 'SecurityDelay', 'LateAircraftDelay'), sum))
+# 
+# delay_summarized = delay_summarized %>%
+#   mutate(total = rowSums(select(., CarrierDelay:LateAircraftDelay))) %>%
+#   mutate_at(vars(CarrierDelay:LateAircraftDelay), ~./total) %>%
+#   select(-total)
+
+delay_summarized <- temp %>%
+  group_by(Airline) %>%
+  summarise(
+    AirlineDelay = sum(CarrierDelay, LateAircraftDelay),
+    OtherDelay = sum(WeatherDelay, NASDelay, SecurityDelay)
+  ) %>%
+  mutate(
+    total = rowSums(select(., AirlineDelay, OtherDelay)),
+    AirlineDelay = AirlineDelay / total,
+    OtherDelay = OtherDelay / total
+  ) %>%
+  select(-total)
+
+delay_summarized_long = tidyr::pivot_longer(delay_summarized, cols = c(AirlineDelay, OtherDelay), names_to = "Variable")
+
+# Show the percentage in bar plots
+ggplot(delay_summarized_long, aes(x = Variable, y = value, fill = Variable)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Proportion of Arrival Delay time by Reason and Airline",
+       x = "Reason",
+       y = "Proportion") +
+  facet_wrap(~ Airline, scales = "free") +
+  theme_minimal() +
+  theme(legend.position = "none", axis.text.x = element_text(angle = 60, hjust = 1)) 
+```
+
+Of note: Southwest showed high average delay and high 'AirlineDelay' percentage, contrary to their strong reputation. Meanwhile, despite their poor reputation, Frontier shows the lowest AirlineDelay percentage.  Just don't use them for red-eyes!
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+# delay_summarized_all = temp %>%
+#   summarise(across(c('CarrierDelay', 'WeatherDelay', 'NASDelay', 'SecurityDelay', 'LateAircraftDelay'), sum))
+# 
+# delay_summarized_all = delay_summarized_all %>%
+#   mutate(total = rowSums(select(., CarrierDelay:LateAircraftDelay))) %>%
+#   mutate_at(vars(CarrierDelay:LateAircraftDelay), ~./total) %>%
+#   select(-total)
+# 
+# delay_summarized_all_long = tidyr::pivot_longer(delay_summarized_all, cols = c(CarrierDelay, WeatherDelay, NASDelay, SecurityDelay, LateAircraftDelay), names_to = "Variable")
+# # Show the percentage in bar plots
+# ggplot(delay_summarized_all_long, aes(x = Variable, y = value, fill = Variable)) +
+#   geom_bar(stat = "identity") +
+#   labs(title = "Proportion of Arrival Delay time by Reason",
+#        x = "Reason",
+#        y = "Proportion") +
+#   theme_minimal() +
+#   theme(legend.position = "none", axis.text.x = element_text(angle = 60, hjust = 1)) 
+```
+
+
+
+### 2) Wrangling the Olympics
+
+A) What is the 95th percentile of heights for female competitors across all Athletics events (i.e., track and field)?  
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+olympics_data = read.csv("./data/olympics_top20.csv")
+
+#A
+
+# Filter for female competitors in Athletics events
+unique_female_athletes = olympics_data %>%
+  filter(sex == 'F', grepl('Athletics', event)) %>%
+  distinct(id, .keep_all = TRUE)
+
+# Calculate the 95th percentile of heights
+percentile_95_height = quantile(unique_female_athletes$height, probs = 0.95, na.rm = TRUE)
+
+print(percentile_95_height)
+
+```
+
+The 95th percentile of heights for female competitors across all Athletics events is 183.
+
+
+B) Which single women's `event` had the greatest variability in competitor's heights across the entire history of the Olympics, as measured by the standard deviation?  
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+#B
+females = filter(olympics_data, sex == 'F')
+
+# Calculate the standard deviation of heights for each event
+std_devs = females %>%
+  group_by(event) %>%
+  summarize(HeightStdDev = sd(height, na.rm = TRUE)) %>%
+  ungroup() %>%
+  na.omit()  
+
+# Find the event with the greatest standard deviation in height
+max_std_dev = max(std_devs$HeightStdDev, na.rm = TRUE)
+event_with_greatest_variability = filter(std_devs, HeightStdDev == max_std_dev)
+
+print(event_with_greatest_variability$event)
+print(event_with_greatest_variability$HeightStdDev)
+```
+
+Rowing Women's Coxed Fours had the greatest variability in competitor's heights across the entire history of the Olympics and its corresponding standard deviation is 10.86549.
+
+
+C) How has the average age of Olympic swimmers changed over time? Does the trend look different for male swimmers relative to female swimmers?
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+swimmers = filter(olympics_data, sport == 'Swimming')
+
+# Calculate the average age of swimmers over time for each gender
+avg_age_over_time = swimmers %>%
+  group_by(year, sex) %>%
+  summarize(AverageAge = mean(age, na.rm = TRUE)) %>%
+  ungroup()
+
+# Plot the data with separate lines for male and female swimmers
+ggplot(avg_age_over_time, aes(x = year, y = AverageAge, color = sex)) +
+  geom_line(size = 1.2) +
+  labs(title = 'Average Age of Olympic Swimmers Over Time by Gender',
+       x = 'Year',
+       y = 'Average Age') +
+  theme_minimal() 
+```
+
+Average age by gender has increased since 1920s for both type's of athletes but began to increase more rapidly for women leading up to year 2000. Suggesting women are competing at the highest level of sport later in their lives, on average.  This likely a result of increased popularity of woman's sports, effects of title IX.
+
+### 3) K-nearest neighbors: cars  
+
+Question: For each trim, make a plot of RMSE versus K, so that we can see where it bottoms out.  Then for the optimal value of K, show a plot of the fitted model, i.e. predictions vs. x.  (Again, separately for each of the two trim levels.)
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+sclass = read.csv("./data/sclass.csv")
+
+set.seed(16)
+
+# Filter for column trim, mileage and price
+sclass = sclass[, c("trim", "mileage", "price")]
+
+# Filter for the two trim levels
+sclass_350 = sclass %>% filter(trim == '350')
+sclass_65_AMG = sclass %>% filter(trim == '65 AMG')
+
+# Split the data for the 350 trim level
+split_350 = initial_split(sclass_350, prop = 0.80) 
+train_350 = training(split_350)
+test_350 = testing(split_350)
+
+# Split the data for the 65 AMG trim level
+split_65_AMG = initial_split(sclass_65_AMG, prop = 0.80) 
+train_65_AMG = training(split_65_AMG)
+test_65_AMG = testing(split_65_AMG)
+
+
+# Do the KNN to calculate the RMSE for each K
+run_knnreg_cv = function(data, num_folds) {
+  k_values = seq(2, 100, by = 2)  # values of k to be evaluated
+  
+  # Initialize dataframe to store results
+  results_df = data.frame(k = integer(), avg_rmse = numeric())
+  
+  # Perform cross-validation for each value of k
+  for (k in k_values) {
+    # Initialize vector to store RMSE values for each fold
+    rmse_values = numeric(num_folds)
+    # Create indices for cross-validation folds
+    folds = sample(rep(1:num_folds, length.out = nrow(data)))
+    # Iterate through each fold
+    for (fold in 1:num_folds) {
+      # Extract training and testing data for this fold
+      train_data = data[folds != fold, ]
+      test_data = data[folds == fold, ]
+      # Perform KNN regression
+      model = knnreg(price ~ mileage, data = train_data, k = k)
+      # Make predictions
+      predictions = predict(model, test_data)
+      # Calculate RMSE for this fold
+      temp = (predictions - test_data["price"])^2
+      rmse_values[fold] = sqrt(mean(temp$price))
+    }
+    # Calculate average RMSE across all folds
+    avg_rmse = mean(rmse_values)
+    # Append results to dataframe
+    results_df = rbind(results_df, data.frame(k = k, avg_rmse = avg_rmse))
+  }
+  
+  return(results_df)
+}
+
+rmse_results_350 = run_knnreg_cv(sclass_350, 10)
+rmse_results_65_AMG = run_knnreg_cv(sclass_65_AMG, 10)
+
+# Identify the optimal K for 350 trim
+optimal_k_350 = rmse_results_350[which.min(rmse_results_350$avg_rmse), ]$k
+
+# Identify the optimal K for 65 AMG trim
+optimal_k_65_AMG = rmse_results_65_AMG[which.min(rmse_results_65_AMG$avg_rmse), ]$k
+
+# Plotting for 350 trim
+ggplot(rmse_results_350, aes(x = k, y = avg_rmse)) +
+  geom_line() + geom_point() +
+  ggtitle("Average RMSE vs K for 350 Trim") +
+  xlab("K") + ylab("RMSE")
+```
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+ggplot(rmse_results_65_AMG, aes(x = k, y = avg_rmse)) +
+  geom_line() + geom_point() +
+  ggtitle("Avergae RMSE vs K for 65 AMG Trim") +
+  xlab("K") + ylab("RMSE")
+```
+
+We have shown the RMSE for different K values vary from 10 to 30 for both trims.  Using k-fold cross validation with fold = 10 we show an optimal k of 16 for the 350 trim and a k of 14 for the 65_AMG trim.
+
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+
+# Function to plot predictions vs mileage for the optimal K
+plot_predictions_vs_mileage = function(data, optimal_k, trim_name) {
+  # Train the KNN model
+  model <- knnreg(price ~ mileage, data = data, k = optimal_k)
+  predictions <- predict(model, data)
+  
+  # Create a data frame for plotting
+  plot_data = data.frame(Mileage = data$mileage, Actual_Price = data$price, Predicted_Price = predictions)
+  
+  ggplot(plot_data, aes(x = Mileage)) +
+    geom_point(aes(y = Actual_Price), color = "blue", alpha = 0.5, size = 3.5) +
+    geom_line(aes(y = Predicted_Price), color = "red", linewidth = 1.3) +
+    ggtitle(paste("Predictions vs Mileage for", trim_name, "with K =", optimal_k)) +
+    xlab("Mileage") + ylab("Price") +
+    theme_minimal()
+}
+
+
+# Plot for 350 trim
+plot_predictions_vs_mileage(sclass_350, optimal_k_350, "350 Trim")
+
+```
+
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+# Plot for 65 AMG trim
+plot_predictions_vs_mileage(sclass_65_AMG, optimal_k_65_AMG, "65 AMG Trim")
+```
+
+
+The higher K of 16 for the 350 trim could be explained by the large gap in the data around the 50,000 mileage mark.  A larger K is needed here to account for bias for observations in that range.
+

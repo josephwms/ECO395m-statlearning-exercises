@@ -1,0 +1,456 @@
+---
+title: 'ECO 395M: StatLearning Exercise 1'
+author: "Joseph Williams, Aahil Navroz, Suqian Qi"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+  md_document:
+
+---
+
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+library(class)
+library(rsample)
+library(caret)
+library(glmnet) 
+library(pROC)
+library(gamlr)
+library(mosaic)
+library(Metrics)
+library(MASS)
+library(modelr)
+```
+
+## Saratoga house prices
+
+*Return to the data set on house prices in Saratoga, NY that we considered in class.  Recall that a starter script here is in `saratoga_lm.R`.  For this data set, you'll run a "horse race" (i.e. a model comparison exercise) between two model classes: linear models and KNN.*  
+
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+# input and standardized the data
+data(SaratogaHouses)
+data_stand = SaratogaHouses
+data_stand = sapply(data_stand, as.numeric)
+data_stand = data.frame(data_stand)
+data_stand[, -1] = scale(data_stand[, -1])
+
+# Generate polynomial features up to power of 2 with interactions for each variable
+predictor = data_stand[,-1]
+variables = names(predictor)
+squared_terms = paste0("I(", variables, "^2)", collapse = " + ")
+formula = as.formula(paste("~ .^2 +", squared_terms))
+predictors =  model.matrix(formula, data = predictor)
+
+set.seed(17)
+
+# Fit the data with the medium model and see the average RMSE under CV.
+rmse_values = numeric(10)
+for (i in 1:10) {
+  # Split data into training and testing sets
+  train_index = createDataPartition(data_stand$price, p = 0.8, list = FALSE)
+  X_train = data_stand[train_index, -1]
+  y_train = data_stand[train_index, 1]
+  X_test = data_stand[-train_index, -1]
+  y_test = data_stand[-train_index, 1]
+  
+  # Fit linear regression model
+  model = lm(y_train ~ ., data = as.data.frame(X_train))
+  y_pred = predict(model, newdata = as.data.frame(X_test))
+  # Calculate RMSE and store it
+  rmse_values[i] = RMSE(y_test, y_pred)
+}
+linear_rmse = mean(rmse_values)
+```
+
+Before fitting data to models, we first standardized all the data except price. Now all variables have same predictive effect on price. We first fit the data with the 'medium' model. The baseline out-of-sample RMSE is 58914.447. Then we explore relavent interaction and square terms by coding feature matrices and running Lasso and Ridge models.
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+# Fit the data using lasso and ridge model
+set.seed(17)
+lasso_model = cv.glmnet(x = predictors, y = data_stand$price, alpha = 1)
+ridge_model = cv.glmnet(x = predictors, y = data_stand$price, alpha = 0)
+lasso_rmse_1se = sqrt(lasso_model$cvm[lasso_model$lambda == lasso_model$lambda.1se])
+ridge_rmse_1se = sqrt(ridge_model$cvm[ridge_model$lambda == ridge_model$lambda.1se])
+```
+
+Lasso model predicts important variables as: `price` ~ `landsize` + `landvalue` + `livingArea` + `bathrooms` + `waterfront` + `centralAir` + `waterfront^2` + `centralAir^2` + `landValue:newConstruction` + `livingArea:centralAir` + `bathrooms:centralAir`. 
+
+Ridge suggests that `landvalue`, `livingArea`, `bathrooms`, `rooms`, `centralAir^2` and `waterfront:newConstruction` are most effective. 
+
+Out-of-sample RMSEs for both Lasso and Ridge are higher than baseline.  We combine features identified by both in a linear model RMSE reported below:
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+set.seed(17)
+
+# Fit the data with the linear model and see the average RMSE under CV.
+rmse_values1 = numeric(10)
+for (i in 1:10) {
+  # Split data into training and testing sets
+  train_index = createDataPartition(data_stand$price, p = 0.8, list = FALSE)
+  X_train = predictors[train_index, -1]
+  y_train = data_stand[train_index, 1]
+  X_test = predictors[-train_index, -1]
+  y_test = data_stand[-train_index, 1]
+  
+  # Fit linear regression model
+  model = lm(y_train ~ `lotSize` + `landValue` + livingArea + bathrooms + waterfront + centralAir
+             + I(waterfront^2) + I(centralAir^2) + landValue:newConstruction + livingArea:centralAir
+             + bathrooms:centralAir + bathrooms + rooms + waterfront:newConstruction, data = as.data.frame(X_train))
+  y_pred = predict(model, newdata = as.data.frame(X_test))
+  # Calculate RMSE and store it
+  rmse_values1[i] = RMSE(y_test, y_pred)
+}
+cat(paste("RSME for linear model is", mean(rmse_values1)))
+
+```
+
+
+
+
+For the KNN model, we use lasso model to do the feature selection for us. We assuming that features that are more important in Lasso also make sense in KNN model. We choose `lotSize`, `landValue`, `livingArea`, `bathrooms`, `rooms`, `waterfront`, `newConstruction` and `centralAir` to fit the KNN model. Under CV, we choose the optimal k equal to 18. However, KNN model performs worse in out-of-sample RMSE than the medium and improved linear models.
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+# KNN Model
+set.seed(17)
+# Use lasso model to provide feature selection guidance for knn
+predictor_matrix = as.matrix(predictor)
+lasso_guide = cv.glmnet(x = predictor_matrix, y = data_stand$price, alpha = 1)
+#coef(lasso_guide, s = "lambda.1se")
+
+run_knnreg_cv = function(data, num_folds) {
+  k_values = seq(2, 100, by = 2)  # values of k to be evaluated
+  
+  # Initialize dataframe to store results
+  results_df = data.frame(k = integer(), avg_rmse = numeric())
+  
+  # Perform cross-validation for each value of k
+  for (k in k_values) {
+    # Initialize vector to store RMSE values for each fold
+    rmse_values = numeric(num_folds)
+    # Create indices for cross-validation folds
+    folds = sample(rep(1:num_folds, length.out = nrow(data)))
+    # Iterate through each fold
+    for (fold in 1:num_folds) {
+      # Extract training and testing data for this fold
+      train_data = data[folds != fold, ]
+      test_data = data[folds == fold, ]
+      # Perform KNN regression
+      model = knnreg(price ~ lotSize + landValue + livingArea + bathrooms + rooms + waterfront
+                     + newConstruction + centralAir, data = train_data, k = k)
+      # Make predictions
+      predictions = predict(model, test_data)
+      # Calculate RMSE for this fold
+      temp = (predictions - test_data["price"])^2
+      rmse_values[fold] = sqrt(mean(temp$price))
+    }
+    # Calculate average RMSE across all folds
+    avg_rmse = mean(rmse_values)
+    # Append results to dataframe
+    results_df = rbind(results_df, data.frame(k = k, avg_rmse = avg_rmse))
+  }
+  return(results_df)
+}
+rmse_result = run_knnreg_cv(data_stand, 10)
+ggplot(rmse_result, aes(x = k, y = avg_rmse)) +
+  geom_line() + geom_point() +
+  ggtitle("Average RMSE vs K") +
+  xlab("K") + ylab("RMSE")
+optimal_k = rmse_result[which.min(rmse_result$avg_rmse), ]$k
+knn_rmse = rmse_result[optimal_k/2,]$avg_rmse
+
+cat(paste("RSME for KNN model is", rmse_result[optimal_k/2,]$avg_rmse))
+
+```
+
+
+
+
+## Classification and retrospective sampling
+
+*Make a bar plot of default probability by credit history, and build a logistic regression model for predicting default probability, using the variables `duration + amount + installment + age + history + purpose + foreign`.*
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+germancredit = read.csv('./data/german_credit.csv')
+#head(germancredit)
+
+##Make a logistic model for predicting default probability
+logit1 = glm(Default ~ duration + amount + installment + age + history + purpose + foreign, data=germancredit, family='binomial')
+#coef(logit1) %>% round(2)
+
+#predicting probabilities for each obs.
+germancredit$est_prob_default = predict(logit1, germancredit, type='response')
+
+##Bar graph of average predicted default probability by credit history
+germancredit %>% group_by(history) %>% 
+  summarize(means_byhistory = mean(est_prob_default)) %>%
+  ggplot(., aes(x=history, y=means_byhistory, fill=history)) +
+  geom_col() +
+  ylim(0,.7) +
+  labs(title = "Logit-Predicted Probability of Default by History",
+       x = "Credit History",
+       y = "Mean Default Probability") +
+  theme_minimal()
+
+#germancredit %>% group_by(history) %>% summarize(history_count = n()) %>% head()
+```
+
+*What do you notice about the `history` variable vis-a-vis predicting defaults?  What do you think is going on here?  In light of what you see here, do you think this data set is appropriate for building a predictive model of defaults, if the purpose of the model is to screen prospective borrowers to classify them into "high" versus "low" probability of default?  Why or why not---and if not, would you recommend any changes to the bank's sampling scheme?*
+
+In this visualization we see higher predicted probabilities of default for individuals with good credit vs those with terrible credit. This counter-intuitive result is likely caused by our dubious sampling method that "matches each default with similar sets of loans that had not defaulted, including all reasonably close matches in the analysis."
+
+The problem here is that we are conditioning on defaulted loans and thus creating a biased sample.  The matching loans associated with `history` == "good" may have other characteristics which are not as often associated with default, and so our model may distinguish `historygood` as the feature which best explains variation in `Default`.  For this reason, this data set is inappropriate for building a model to screen prospective borrowers for default risk.  Random sampling would eliminate this issue because there would be a much larger number of loans with `historygood` == 1 & `Default` == 0, and so other, less-biased relationships might emerge.
+
+
+
+## Children and hotel reservations
+
+*The files `hotels_dev.csv` and `hotels_val.csv` contains data on tens of thousands of hotel stays from a major U.S.-based hotel chain.  The goal of this problem is simple: to build a predictive model for whether a hotel booking will have children on it. This is an excellent use case for an ML model: a piece of software that can scan the bookings for the week ahead and produce an estimate for how likely each one is to have a "hidden" child on it.*
+
+
+### Model building
+
+*Using only the data in `hotels.dev.csv`, please compare the out-of-sample performance of the following models:*
+
+1. *baseline 1: a small model that uses only the `market_segment`, `adults`, `customer_type`, and `is_repeated_guest` variables as features.*
+
+
+For baseline 1 we used a linear model using the lm function in R.  We then ran k-fold validation with k=10 and calculated the mean RMSE [below].
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+hoteldev = read.csv('./data/hotels_dev.csv')
+hotelval = read.csv('./data/hotels_val.csv')
+
+set.seed(1)
+
+#hoteldev$arrival_date <- substr(hoteldev$arrival_date, 6, 10)
+
+hotel_folds = crossv_kfold(hoteldev, k=10)
+
+hotels1 = map(hotel_folds$train, ~ lm(children ~ market_segment + customer_type + is_repeated_guest, data=.))
+#hotels1.1 = map(hotel_folds$train, ~ glm(children ~ market_segment + customer_type + is_repeated_guest, data=., family='binomial'))
+
+cat(paste('base1 RMSE:', map2_dbl(hotels1, hotel_folds$test, modelr::rmse) %>% mean %>% round(4)))
+#cat(paste('base1.1 RMSE:', map2_dbl(hotels1.1, hotel_folds$test, modelr::rmse) %>% mean %>% round(4)))
+
+```
+
+2. *baseline 2: a big model that uses all the possible predictors _except_ the `arrival_date` variable (main effects only).*  Same approach as [above] with marginal gains.
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+
+hotels2 = map(hotel_folds$train, ~ lm(children ~ . - arrival_date, data=.))
+
+cat(paste('base2 RMSE:', map2_dbl(hotels2, hotel_folds$test, modelr::rmse) %>% mean %>% round(4)))
+
+```
+
+3. *the best linear model you can build, including any engineered features that you can think of that improve the performance (interactions, features derived from time stamps, etc).*
+
+I tested various linear models and arrived at base3.3 which is base2 with the following additional terms: 
+
+- `poly(adults, 2)`
+- `poly(total_of_special_requests, 2)`
+- `required_car_parking_spaces:poly(adults, 2)`
+- `reserved_room_type:customer_type`
+- `reserved_room_type:average_daily_rate`
+- `reserved_room_type:meal`
+- `reserved_room_type:stays_in_weekend_nights`
+- `reserved_room_type:hotel`
+- `hotel:stays_in_weekend_nights`
+
+NOTE: base3.4 includes these terms + `arrival_date` which has been re-coded to eliminate "yyyy" so to capture a day-of-the-year effect.  We see that base3.4 is more significant but only improves RSME by a fraction of percentage at the expense of adding hundreds of variables.  Thus, we will move forward with base 3.3.
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+
+hotels3.3 = map(hotel_folds$train, ~ lm(children ~ . - arrival_date + poly(adults, 2) + required_car_parking_spaces:poly(adults, 2) + poly(total_of_special_requests, 2) + reserved_room_type:customer_type + reserved_room_type:average_daily_rate + reserved_room_type:meal + reserved_room_type:stays_in_weekend_nights + reserved_room_type:hotel + hotel:stays_in_weekend_nights, data=.))
+#hold off on arrival date for now
+
+# hotels3.4 = map(hotel_folds$train, ~ lm(children ~ . + poly(adults, 2) + required_car_parking_spaces:poly(adults, 2) + poly(total_of_special_requests, 2) + reserved_room_type:customer_type + reserved_room_type:average_daily_rate + reserved_room_type:meal + reserved_room_type:stays_in_weekend_nights + reserved_room_type:hotel + hotel:stays_in_weekend_nights, data=.))
+#finally add arrival date
+
+cat(paste('base3.3 RMSE:', map2_dbl(hotels3.3, hotel_folds$test, modelr::rmse) %>% mean %>% round(4)))
+#cat(paste('base3.4 (with arrival date) RMSE:', '0.2249'))
+
+#Lasso code SS
+# base3x = model.matrix(children ~ .-1 - arrival_date, data=hoteldev) # do -1 to drop intercept!
+# base3y = hoteldev$children
+# 
+# base3 = cv.gamlr(base3x, base3y, nfold=10, verb=TRUE)
+# 
+# base3.min = coef(base3, select='min') #this is the minimized lasso
+# base3.1se = coef(base3) #we want the simpler model
+# #cat(paste("base3 is a lasso with lambda =", log(base3$lambda.1se) %>% round(4), " and a total of", sum(base3.1se!=0), "coefficients"))
+# #base3.1se
+# cat(paste('base3 RMSE:', sqrt(base3$cvm[base3$seg.1se]) %>% round(4)))
+
+```
+
+
+### Model validation: step 1
+
+*Once you've built your best model and assessed its out-of-sample performance using `hotels_dev`, now turn to the data in `hotels_val`.  Now you'll __validate__ your model using this entirely fresh subset of the data, i.e. one that wasn't used to fit OR test as part of the model-building stage.  (Using a separate "validation" set, completely apart from your training and testing set, is a generally accepted best practice in machine learning.) *
+
+*Produce an ROC curve for your best model, using the data in `hotels_val`: that is, plot TPR(t) versus FPR(t) as you vary the classification threshold t.*
+
+See below confusion matrix and ROC curve, where 'Sensitivity' = TPR and Specificity = 1-FPR.
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+#how can I use the model fitted before using cross validation.  Do I need to to use the cadet train function?  The model without cross validation is showing the same RMSE.  So that's promising.
+
+base3.3 = lm(children ~ . - arrival_date + poly(adults, 2) + required_car_parking_spaces:poly(adults, 2) + poly(total_of_special_requests, 2) + reserved_room_type:customer_type + reserved_room_type:average_daily_rate + reserved_room_type:meal + reserved_room_type:stays_in_weekend_nights + reserved_room_type:hotel + hotel:stays_in_weekend_nights, data=hoteldev)
+
+#test accuracy
+#hotelval$arrival_date <- substr(hotelval$arrival_date, 6, 10)
+probhat_val = predict(base3.3, newdata=hotelval)
+yhat_val = ifelse(probhat_val >= 0.5, 1, 0)
+table(y=hotelval$children, yhat=yhat_val)
+
+#
+roc_result = roc(response = hotelval$children, predictor = probhat_val)
+plot(roc_result, main = "ROC Curve")
+
+
+```
+
+
+
+### Model validation: step 2
+
+*Next, create 20 folds of `hotels_val`.  There are 4,999 bookings in `hotels_val`, so each fold will have about 250 bookings in it -- roughly the number of bookings the hotel might have on a single busy weekend.  For each fold:* 
+
+*1. Predict whether each booking will have children on it.  *
+*2. Sum up the predicted probabilities for all the bookings in the fold.  This gives an estimate of the expected number of bookings with children for that fold.  *
+*3. Compare this "expected" number of bookings with children versus the actual number of bookings with children in that fold.*
+
+*How well does your model do at predicting the total number of bookings with children in a group of 250 bookings?  Summarize this performance across all 20 folds of the `val` set in an appropriate figure or table.  *
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+hotel_folds = 20
+
+eval_df <- data.frame(fold = 1:hotel_folds, sum_predictions = numeric(hotel_folds), sum_actual = numeric(hotel_folds))
+
+folds = sample(rep(1:hotel_folds, length.out = nrow(hotelval)))
+    # Iterate through each fold
+for (fold in 1:hotel_folds) {
+    # predict whether each booking will have children in it
+    fold_data = hotelval[folds == fold, ]
+    predictions = predict(base3.3, fold_data)
+    sum_predictions = sum(predictions)
+    eval_df$sum_predictions[fold] <- sum_predictions
+    
+    #add sum for actual amount of children
+    sum_actual = sum(fold_data$children==1)
+    eval_df$sum_actual[fold] <- sum_actual
+    # Calculate RMSE for this fold
+    #sum_predicted = (predictions - test_data["price"])^2
+    #rmse_values[fold] = sqrt(mean(temp$price))
+}
+
+plot1 = ggplot(eval_df, aes(x=sum_predictions, y=sum_actual)) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1, color = "lightblue")+
+  labs(x = "Actual Children", y = "Predicted Children") +
+  scale_x_continuous(limits = c(12, 28)) +   # Set x-axis limits
+  scale_y_continuous(limits = c(12, 28)) +
+  ggtitle("Actual vs Base3.3-predicted Child Totals for k=20 Folds") +
+  theme_minimal()
+
+plot1
+
+
+
+
+```
+
+Seen above, our model does an pretty awesome job of predicting whether or not there will be children at the booking.  We are often within 5 children off from actual, and we are about as often higher than actual than lower.  This will give the hotel a good idea of how many kiddos to expect.
+
+
+## Mushroom classification
+
+*The data in [mushrooms.csv](../data/mushrooms.csv) correspond to 23 species of gilled mushrooms in the Agaricus and Lepiota Family.  Each species is identified as definitely edible (class = e), definitely poisonous (class = p), or of unknown edibility and not recommended.  (This latter class was combined with the poisonous one.)  There is no simple rule for determining the edibility of a mushroom, analogous to "leaves of three, let it be" for poison ivy.*
+
+*The features in the data set are as follows [see assignment]*
+
+*So you can see that all of the variables are categorical, sometimes with more than 2 levels.*
+
+*Can you predict whether a mushroom is poisonous using machine learning?  Write a short report on the best-performing model you can find using lasso-penalized logistic regression.  Evaluate the out-of-sample performance of your model using a ROC curve.  Based on this ROC curve, recommend a probability threshold for declaring a mushroom poisonous.  How well does your model perform at this threshold, as measured by false positive rate and true positive rate?*
+
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+
+# Load the mushroom dataset
+mushrooms = read.csv("./data/mushrooms.csv")
+
+# Removing columns that would have factors with less than 2 levels
+mushrooms <- mushrooms %>%
+  select_if(~n_distinct(.) > 1)
+
+# Convert all categorical variables to factors
+mushrooms = mushrooms %>% mutate_if(is.character, as.factor)
+
+# Encode the target variable 'class' as binary
+mushrooms$class = as.numeric(mushrooms$class) - 1
+
+# Create a training and test dataset
+set.seed(42) # For reproducibility
+training_index = createDataPartition(mushrooms$class, p = 0.8, list = FALSE)
+train_data = mushrooms[training_index, ]
+test_data = mushrooms[-training_index, ]
+
+# Prepare the model matrix
+x_train = model.matrix(class ~ . - 1, data = train_data) # -1 to exclude intercept
+y_train = train_data$class
+
+x_test = model.matrix(class ~ . - 1, data = test_data)
+y_test = test_data$class
+
+# Fit the lasso-penalized logistic regression model
+cv_fit = cv.glmnet(x_train, y_train, family = "binomial", alpha = 1)
+
+plot(cv_fit)
+
+# Print the minimum lambda value used
+cat("Ideal Lambda:", cv_fit$lambda.min)
+
+```
+
+Using the lasso-penalized logistic regression model, we get the graph depicted above which shows the relationship between log lambda and binomial deviance. The lambda that minimizes deviance is approximately 0.0001444448. We can use this value to evaluate the out-of-sample performance of our model through a ROC curve. 
+
+``` {r, message=FALSE, echo=FALSE, warning=FALSE}
+
+# Predict on the test set
+# Here we extract the probabilities for the class of interest (which is the second column of the predict matrix)
+predictions = predict(cv_fit, newx = x_test, s = "lambda.min", type = "response")[,1]
+
+# Generate the ROC curve
+# I tried to plot the ROC through a more manual method by going sequencing through each of the thresholds and found the tpr and fpr of each threshold using a for loop and still got the same shape for the ROC curve so I used the ROC function for simplicity.
+
+roc_result = roc(response = y_test, predictor = predictions)
+plot(roc_result, main = "ROC Curve")
+
+```
+
+ 
+In this case, the ROC curve does not resemble the typical curve but rather mirrors the shape of a right triangle. This sort of configuration indicates that the lasso-penalized logistic regression model has exceptional classification accuracy. This is because a right triangle shape suggests a model characterized by both high sensitivity and high specificity.
+
+``` {r, message=FALSE, echo=FALSE, warning=FALSE}
+
+# Find the optimal threshold
+coords(roc_result, "best", ret = c("threshold", "sensitivity", "specificity"))
+
+best_coords = coords(roc_result, "best", ret = c("specificity", "sensitivity"))
+fpr = 1 - best_coords["specificity"]
+tpr = best_coords["sensitivity"]
+
+cat(paste("FPR", fpr ), "\n")
+cat(paste("TPR", tpr ), "\n") 
+
+
+```
+
+Based on the ROC curve I would recommend a probability threshold of 0.5017094. Since we have a false positive rate of 0 and a true positive of 1, it is safe to say that our model performs exceptionally well at this threshold. To be certain that this exceptional performance is not a product of overfitting, we could test our model on an external dataset to see if it performs similarly. In conclusion, we are able to predict that poisonous mushrooms ARE INDEED poisonous 100% of the time.
+

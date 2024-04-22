@@ -3,7 +3,6 @@ title: 'ECO 395M: StateLearning Exercise 4'
 author: "Aahil Navroz, Joseph Williams, Qi Suqian"
 date: "`r Sys.Date()`"
 output: 
-  html_document:
   md_document:
 ---
 # ECO 395M: StatLearning Exercise 3
@@ -13,7 +12,10 @@ Aahil Navroz, Joseph Williams, Qi Suqian
 04/22/2023
 
 ## Clustering and PCA
-We first did a preliminary analysis to these chemical properties. We plot the correlation plot of them with color and quality. According to the plot, total.sulfur.dioxide, volatile.acidity and chlorides are the 3 most related variables to color and alcohol is the most related variable to quality
+*Run both PCA and a clustering algorithm of your choice on the 11 chemical properties (or suitable transformations thereof) and summarize your results. Convince yourself (and me) that your chosen method is easily capable of distinguishing the reds from the whites. Does your unsupervised technique also seem capable of distinguishing the higher from the lower quality wines?*
+
+We first performed a preliminary analysis on the chemical properties. We plot the correlation matrix using color and quality. According to the plot, `total.sulfur.dioxide`, `volatile.acidity` and `chlorides` are the 3 most related variables to color and `alcohol` is the most related variable to `quality`.
+
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
 library(ggcorrplot)
 library(tidyverse)
@@ -31,16 +33,20 @@ quality_sample = wine[,-13]
 ggcorrplot(cor(color_sample),lab = TRUE,hc.order = TRUE)
 ggcorrplot(cor(quality_sample),lab = TRUE,hc.order = TRUE)
 ```
-We implemented the PCA algorithm on the 11 chemical properties and showed the PCA variance plot. We choose to decrease the data dimension to 4, which means we choose the first 4 PcA components. We then showed the unit vector of these 4 PCA components.
+
+Next, we run PCA on the 11 chemical properties and show the PCA variance plot. We choose to decrease the data dimension to 4, which means we choose the first 4 PCA components. We then show the unit vector of these 4 PCA components.
+
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
 # pca results
 PCApilot = prcomp(chemical, scale=TRUE, rank=4)
-plot(PCApilot)
+plot(PCApilot, xlab = "PCA Dimensions")
 summary(PCApilot)
 #the variance decrease slowly after PC4,so we choose to reduce the data dimension to 4
 round(PCApilot$rotation[,1:4],2) 
 ```
-Now we plot the wine color data to PC1 and PC2. From all the combination of PC components, PC1 and PC2 best distinguish the red wine to white wine.
+
+Now we plot the wine color data to PC1 and PC2. From all the combination of PC components, PC1 and PC2 best distinguish red wine from white wine.
+
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
 color_pca = data.frame(wine$color, PCApilot$x[,1:4])
 ggplot(color_pca, aes(x = PC1, y = PC2, color = wine.color)) + 
@@ -52,7 +58,9 @@ ggplot(color_pca, aes(x = PC1, y = PC2, color = wine.color)) +
   theme_minimal() + 
   theme(legend.position = "right")
 ```
-Then we try thw K-means cluster algorithm. We choose to cluster the data into two subsets and constructed the confusion matrix and this the accuracy, which reaches 98.58%. So we think both these 2 methods greatly distinguish the wine color data.
+
+We move on to K-means clustering algorithms. We chose to cluster the data into two subsets. The below confusion matrix shows 98.58% accuracy. Altogether, we conclude that both PCA analysis and K-means clustering are similarly effective in predicting wine color.
+
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
 Kmeans_clust_col = KMeans_rcpp(chemical, clusters=2, num_init=25)
 col_cluster = Kmeans_clust_col$cluster
@@ -63,7 +71,9 @@ print(conf_matrix_col)
 accuracy_col = sum(diag(conf_matrix_col)) / sum(conf_matrix_col)
 print(accuracy_col)
 ```
-Then we tried to use PCA to distinguish the wine quality. The plot shows that PCA method doesn't perform well and it's hard to manually distinguish them, so we also made a 3D plot for better visualization. Both plots showed that PCA perform bad for wine quality.
+
+Next we try to use PCA to distinguish the wine quality. The plot shows that PCA method doesn't perform well and it's hard to visually distinguish wines of different color using any combination of PCA factors. We also made a 3D plot for better visualization (see Rmd). Both plots showed that PCA performs badly for wine quality.
+
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
 # pca for quality
 quality_pca = data.frame(wine$quality, PCApilot$x[,1:4])
@@ -76,10 +86,13 @@ ggplot(quality_pca, aes(x = PC1, y = PC2, color = wine.quality)) +
        color = "Wine Quality") +
   theme_minimal() + 
   theme(legend.position = "right")
-open3d()
-plot3d(quality_pca$PC1, quality_pca$PC2, quality_pca$wine.quality, size=3,col=quality_pca$wine.quality)
+#open3d()
+#plot3d(quality_pca$PC1, quality_pca$PC2, quality_pca$wine.quality, size=3,col=quality_pca$wine.quality)
 ```
-Now we check the performance of K-means method for wine quality. The accuracy is only 15%, which is also very bad. As a result, both methods seem not capable of distinguishing the higher from the lower quality wines.
+
+
+Now we check the performance of K-means for wine quality. The accuracy is only 15%, which is also very bad. As a result, both methods do not seem capable of predicting wine quality.
+
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
 # k-means for quality
 Kmeans_clust_qua = KMeans_rcpp(chemical, clusters=7, num_init=25)
@@ -165,7 +178,7 @@ plot1 = ggplot(group_counts1, aes(x = group, y = user_count)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
-Over 1500 users are in the loosely constructed `familyvalues', 'yuppie', and 'socialyte' groups, respectively.  Even with filtering efforts, however, many users are likely counted 2 or even 3 times. Before we go farther in this direction, lets shift to machine learning algorithms so that our clusters are definite and exhaustive.  We'll start with K-means and K_means++ clustering with K=5-7 clusters, since we see 6 key groups off the bat.  See below visualizations and counts per cluster.
+Over 1500 users are in the loosely constructed `familyvalues', 'yuppie', and 'socialyte' groups, respectively.  Even with filtering efforts, however, many users are likely counted 2 or even 3 times. Before we go farther in this direction, lets shift to machine learning algorithms so that our clusters are definite and exhaustive.  We'll start with K-means and K_means++ clustering with K=5-7 clusters, since we see 6 key groups off the bat.  See below visualizations and counts for K=6 cluster, which showed the most evenly distributed and sensible results.
 
 
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
@@ -185,7 +198,7 @@ ft = scale(ft, center=TRUE, scale=TRUE)
 
 # Execute kmeans
 set.seed(1)
-k_values <- c(5, 7, 6)
+k_values <- c(6)
 
 for (k in k_values) {
   clust = kmeans(ft, k, nstart=50)
@@ -239,9 +252,7 @@ for (k in k_values) {
 
 ```
 
-We are able to confirm using unsupervised learning pretty much the same clusters we identified using intuition and basic tools. Labeled variables have centroid values over a certain, relatively-high threshold.  Our results use standard K-means but we've verified that results are repeatable with K-means++ start up.
-
-Altogether, its clear that K=6 weeds out the most spam posts and maintains an even distribution between the other categories, a key requirement of clustering.
+We are able to confirm using unsupervised learning pretty much the same clusters we identified using intuition and basic tools. Our K=6 clustering also weeds out a large number of spam posts (see the unlabled wedge, which also has the most users).  Labeled variables have centroid values over a certain, relatively-high threshold.  Our results use standard K-means but we've verified that results are repeatable with K-means++ start up.
 
 
 #### Insights & Recommended Steps
@@ -335,6 +346,14 @@ plot(rules, method = "graph")
 
 
 ## Image classification with neural networks
+
+
+Our write up for this question is stored in the hw4_jupyter folder.  Please run the hw4q4.ipynb file as you would. You may need to change 'python3' to 'python', 'pip3' to 'pip' or vice versa.  Please reach out if the code is not working!
+
+
+
+
+
 
 
 

@@ -6,7 +6,87 @@ Aahil Navroz, Joseph Williams, Qi Suqian
 
 ## Clustering and PCA
 
+*Run both PCA and a clustering algorithm of your choice on the 11
+chemical properties (or suitable transformations thereof) and summarize
+your results. Convince yourself (and me) that your chosen method is
+easily capable of distinguishing the reds from the whites. Does your
+unsupervised technique also seem capable of distinguishing the higher
+from the lower quality wines?*
+
+We first performed a preliminary analysis on the chemical properties. We
+plot the correlation matrix using color and quality. According to the
+plot, `total.sulfur.dioxide`, `volatile.acidity` and `chlorides` are the
+3 most related variables to color and `alcohol` is the most related
+variable to `quality`.
+
 ![](exercises04_files/figure-markdown_strict/unnamed-chunk-1-1.png)![](exercises04_files/figure-markdown_strict/unnamed-chunk-1-2.png)
+
+Next, we run PCA on the 11 chemical properties and show the PCA variance
+plot. We choose to decrease the data dimension to 4, which means we
+choose the first 4 PCA components. We then show the unit vector of these
+4 PCA components.
+
+![](exercises04_files/figure-markdown_strict/unnamed-chunk-2-1.png)
+
+    ## Importance of first k=4 (out of 11) components:
+    ##                           PC1    PC2    PC3     PC4
+    ## Standard deviation     1.7407 1.5792 1.2475 0.98517
+    ## Proportion of Variance 0.2754 0.2267 0.1415 0.08823
+    ## Cumulative Proportion  0.2754 0.5021 0.6436 0.73187
+
+    ##                        PC1   PC2   PC3   PC4
+    ## fixed.acidity        -0.24 -0.34 -0.43  0.16
+    ## volatile.acidity     -0.38 -0.12  0.31  0.21
+    ## citric.acid           0.15 -0.18 -0.59 -0.26
+    ## residual.sugar        0.35 -0.33  0.16  0.17
+    ## chlorides            -0.29 -0.32  0.02 -0.24
+    ## free.sulfur.dioxide   0.43 -0.07  0.13 -0.36
+    ## total.sulfur.dioxide  0.49 -0.09  0.11 -0.21
+    ## density              -0.04 -0.58  0.18  0.07
+    ## pH                   -0.22  0.16  0.46 -0.41
+    ## sulphates            -0.29 -0.19 -0.07 -0.64
+    ## alcohol              -0.11  0.47 -0.26 -0.11
+
+Now we plot the wine color data to PC1 and PC2. From all the combination
+of PC components, PC1 and PC2 best distinguish red wine from white wine.
+
+![](exercises04_files/figure-markdown_strict/unnamed-chunk-3-1.png)
+
+We move on to K-means clustering algorithms. We chose to cluster the
+data into two subsets. The below confusion matrix shows 98.58% accuracy.
+Altogether, we conclude that both PCA analysis and K-means clustering
+are similarly effective in predicting wine color.
+
+    ##           Cluster_Label
+    ## True_Color  red white
+    ##      red   1575    24
+    ##      white   68  4830
+
+    ## [1] 0.9858396
+
+Next we try to use PCA to distinguish the wine quality. The plot shows
+that PCA method doesn’t perform well and it’s hard to visually
+distinguish wines of different color using any combination of PCA
+factors. We also made a 3D plot for better visualization (see Rmd). Both
+plots showed that PCA performs badly for wine quality.
+
+![](exercises04_files/figure-markdown_strict/unnamed-chunk-5-1.png)
+
+Now we check the performance of K-means for wine quality. The accuracy
+is only 15%, which is also very bad. As a result, both methods do not
+seem capable of predicting wine quality.
+
+    ##           Cluster_Label
+    ## True_Color   3   4   5   6   7   8   9
+    ##          3   5   6   7   4   2   3   3
+    ##          4  63  64  24  15   2  26  22
+    ##          5 457 469 649 197  27 263  76
+    ##          6 533 346 640 263  16 480 558
+    ##          7 131  43 122 140   2 191 450
+    ##          8  25   2  22  14   0  32  98
+    ##          9   1   0   0   0   0   0   4
+
+    ## [1] 0.1568416
 
 ## Market segmentation
 
@@ -17,7 +97,7 @@ might position their brand to maximally appeal to each market segment.*
 To get a basic idea of our data lets start with a two-way correlation
 plot.
 
-![](exercises04_files/figure-markdown_strict/unnamed-chunk-2-1.png)
+![](exercises04_files/figure-markdown_strict/unnamed-chunk-7-1.png)
 
 Great! So already we’re seeing some clusters. I notice see two way
 correlation within the following groups:
@@ -36,7 +116,15 @@ of each cluster. Lets also filter out users who are in more than 3 of
 these respective groups to eliminate generalists and get a better
 personality portrait of our followers.
 
-![](exercises04_files/figure-markdown_strict/unnamed-chunk-3-1.png)
+    ## # A tibble: 6 × 2
+    ##   group               user_count
+    ##   <chr>                    <dbl>
+    ## 1 group1_familyvalues       1518
+    ## 2 group2_collegeboy         1036
+    ## 3 group3_fashionable        1211
+    ## 4 group4_yuppie             1766
+    ## 5 group5_neoliberal         1285
+    ## 6 group6_socialyte          1820
 
 Over 1500 users are in the loosely constructed \`familyvalues’,
 ‘yuppie’, and ‘socialyte’ groups, respectively. Even with filtering
@@ -44,66 +132,31 @@ efforts, however, many users are likely counted 2 or even 3 times.
 Before we go farther in this direction, lets shift to machine learning
 algorithms so that our clusters are definite and exhaustive. We’ll start
 with K-means and K\_means++ clustering with K=5-7 clusters, since we see
-6 key groups off the bat. See below visualizations and counts per
-cluster.
+6 key groups off the bat. See below visualizations and counts for K=6
+cluster, which showed the most evenly distributed and sensible results.
 
-![](exercises04_files/figure-markdown_strict/unnamed-chunk-4-1.png)
-
-    ##   Cluster Users
-    ## 1       1   740
-    ## 2       2   670
-    ## 3       3  4172
-    ## 4       4   870
-    ## 5       5  1430
-
-![](exercises04_files/figure-markdown_strict/unnamed-chunk-4-2.png)
+![](exercises04_files/figure-markdown_strict/unnamed-chunk-9-1.png)
 
     ##   Cluster Users
-    ## 1       1  1280
-    ## 2       2   620
-    ## 3       3   706
-    ## 4       4   517
-    ## 5       5   371
-    ## 6       6  3583
-    ## 7       7   805
-
-![](exercises04_files/figure-markdown_strict/unnamed-chunk-4-3.png)
-
-    ##   Cluster Users
-    ## 1       1   682
-    ## 2       2   888
-    ## 3       3   574
-    ## 4       4  4545
-    ## 5       5   764
-    ## 6       6   429
+    ## 1       1  4539
+    ## 2       2   889
+    ## 3       3   759
+    ## 4       4   439
+    ## 5       5   682
+    ## 6       6   574
 
 We are able to confirm using unsupervised learning pretty much the same
-clusters we identified using intuition and basic tools. Labeled
-variables have centroid values over a certain, relatively-high
-threshold. Our results use standard K-means but we’ve verified that
-results are repeatable with K-means++ start up. Regarding selection of K
-we notice the following points:
-
--   Each K identifies a ‘spam’ category where no variables are dominant.
--   K=5 splits up our ‘fashionable’ and ‘socialyte’ clusters between the
-    four non-spam groups, so that the only major feature of one of the
-    clusters is `photo_sharing`.  
--   K=6,7 recovers the ‘fashionable’ cluster, and some of the
-    ‘socialyte’ cluster. Its likely that the ‘socialyte’ characteristics
-    `shopping`, `chatter` and `photo sharing` represent popular uses of
-    Twitter which are more easily distributed between users in other
-    categories.
-
-Altogether, its clear that K=6 weeds out the most spam posts and
-maintains an even distribution between the other categories, a key
-requirement of clustering. Most importantly, it aligns incredibly well
-with our opening analysis. Next, our key insights will rely on K-means
-clustering using K=6 and identify five distinct non-spam groups.
+clusters we identified using intuition and basic tools. Our K=6
+clustering also weeds out a large number of spam posts (see the unlabled
+wedge, which also has the most users). Labeled variables have centroid
+values over a certain, relatively-high threshold. Our results use
+standard K-means but we’ve verified that results are repeatable with
+K-means++ start up.
 
 #### Insights & Recommended Steps
 
-We’ve identified 5 roughly even-sized market segments. Here are the two
-largest in descending order:
+We’ve identified 5 roughly even-sized market segments using K-means
+clustering with K=6. Here are the two largest in descending order:
 
 -   **Health-conscious adults (likely mid-twenties to thirties)**. In my
     city we call these yoga enthusiasts and REI shoppers ‘yuppies’,
@@ -159,57 +212,40 @@ See below head() for first 5 baskets.
     ##      whole milk}
 
 Next, we’ll initialize association analysis with very low support and
-confidence levels and further tuned from there depending on the
-distributions we saw while plotting the rules. Based on the spread of
-confidence and lift, we changed values in order to find that sweet spot
-of confidence which is not too restrictive, and has a lift value which
-will enable us to focus on more significant rules. Eventually, I arrived
-at the value of 0.01 for support and set confidence to 0.25.
+confidence levels and tune from there depending on distributions we see
+when plotting the rules.
 
-![](exercises04_files/figure-markdown_strict/unnamed-chunk-7-1.png)
+Based on spread of confidence and lift, we tweaked ‘supp’, ‘conf’ and
+‘minlen’ parameters to find a sweet spot where confidence is not too
+restrictive but there is enough variation in lift to identify the most
+significant associations. Eventually, we arrived at parameter values of
+0.01 for support and 0.25 for confidence.
 
-170 is quite a large number for rules in this case. I would like more to
-analyze more significant associations so I will only focus on lifts that
-are greater than 2.5.
+![](exercises04_files/figure-markdown_strict/unnamed-chunk-12-1.png)
 
-    ##      lhs                                       rhs                support   
-    ## [1]  {citrus fruit, other vegetables}       => {root vegetables}  0.01037112
-    ## [2]  {other vegetables, tropical fruit}     => {root vegetables}  0.01230300
-    ## [3]  {beef}                                 => {root vegetables}  0.01738688
-    ## [4]  {citrus fruit, root vegetables}        => {other vegetables} 0.01037112
-    ## [5]  {root vegetables, tropical fruit}      => {other vegetables} 0.01230300
-    ## [6]  {other vegetables, whole milk}         => {root vegetables}  0.02318251
-    ## [7]  {curd, whole milk}                     => {yogurt}           0.01006609
-    ## [8]  {other vegetables, yogurt}             => {root vegetables}  0.01291307
-    ## [9]  {other vegetables, yogurt}             => {tropical fruit}   0.01230300
-    ## [10] {other vegetables, rolls/buns}         => {root vegetables}  0.01220132
-    ## [11] {tropical fruit, whole milk}           => {root vegetables}  0.01199797
-    ## [12] {rolls/buns, root vegetables}          => {other vegetables} 0.01220132
-    ## [13] {root vegetables, yogurt}              => {other vegetables} 0.01291307
-    ## [14] {whole milk, yogurt}                   => {tropical fruit}   0.01514997
-    ## [15] {pip fruit}                            => {tropical fruit}   0.02043721
-    ## [16] {tropical fruit, whole milk}           => {yogurt}           0.01514997
-    ## [17] {whipped/sour cream, yogurt}           => {other vegetables} 0.01016777
-    ## [18] {other vegetables, whipped/sour cream} => {yogurt}           0.01016777
-    ##      confidence coverage   lift     count
-    ## [1]  0.3591549  0.02887646 3.295045 102  
-    ## [2]  0.3427762  0.03589222 3.144780 121  
-    ## [3]  0.3313953  0.05246568 3.040367 171  
-    ## [4]  0.5862069  0.01769192 3.029608 102  
-    ## [5]  0.5845411  0.02104728 3.020999 121  
-    ## [6]  0.3097826  0.07483477 2.842082 228  
-    ## [7]  0.3852140  0.02613116 2.761356  99  
-    ## [8]  0.2974239  0.04341637 2.728698 127  
-    ## [9]  0.2833724  0.04341637 2.700550 121  
-    ## [10] 0.2863962  0.04260295 2.627525 120  
-    ## [11] 0.2836538  0.04229792 2.602365 118  
-    ## [12] 0.5020921  0.02430097 2.594890 120  
-    ## [13] 0.5000000  0.02582613 2.584078 127  
-    ## [14] 0.2704174  0.05602440 2.577089 149  
-    ## [15] 0.2701613  0.07564820 2.574648 201  
-    ## [16] 0.3581731  0.04229792 2.567516 149  
-    ## [17] 0.4901961  0.02074225 2.533410 100  
-    ## [18] 0.3521127  0.02887646 2.524073 100
+170 is quite a large number for rules in this case. Lets only focus on
+lifts that are greater than 2.5 in order to analyze only significant
+associations.
+
+    ##      lhs                                       rhs                support confidence coverage lift  count
+    ## [1]  {citrus fruit, other vegetables}       => {root vegetables}  0.010   0.359      0.029    3.295 102  
+    ## [2]  {other vegetables, tropical fruit}     => {root vegetables}  0.012   0.343      0.036    3.145 121  
+    ## [3]  {beef}                                 => {root vegetables}  0.017   0.331      0.052    3.040 171  
+    ## [4]  {citrus fruit, root vegetables}        => {other vegetables} 0.010   0.586      0.018    3.030 102  
+    ## [5]  {root vegetables, tropical fruit}      => {other vegetables} 0.012   0.585      0.021    3.021 121  
+    ## [6]  {other vegetables, whole milk}         => {root vegetables}  0.023   0.310      0.075    2.842 228  
+    ## [7]  {curd, whole milk}                     => {yogurt}           0.010   0.385      0.026    2.761  99  
+    ## [8]  {other vegetables, yogurt}             => {root vegetables}  0.013   0.297      0.043    2.729 127  
+    ## [9]  {other vegetables, yogurt}             => {tropical fruit}   0.012   0.283      0.043    2.701 121  
+    ## [10] {other vegetables, rolls/buns}         => {root vegetables}  0.012   0.286      0.043    2.628 120  
+    ## [11] {tropical fruit, whole milk}           => {root vegetables}  0.012   0.284      0.042    2.602 118  
+    ## [12] {rolls/buns, root vegetables}          => {other vegetables} 0.012   0.502      0.024    2.595 120  
+    ## [13] {root vegetables, yogurt}              => {other vegetables} 0.013   0.500      0.026    2.584 127  
+    ## [14] {whole milk, yogurt}                   => {tropical fruit}   0.015   0.270      0.056    2.577 149  
+    ## [15] {pip fruit}                            => {tropical fruit}   0.020   0.270      0.076    2.575 201  
+    ## [16] {tropical fruit, whole milk}           => {yogurt}           0.015   0.358      0.042    2.568 149  
+    ## [17] {whipped/sour cream, yogurt}           => {other vegetables} 0.010   0.490      0.021    2.533 100  
+    ## [18] {other vegetables, whipped/sour cream} => {yogurt}           0.010   0.352      0.029    2.524 100
 
 Looking at the rules sorted by lift, many of these item sets make
 intuitive sense in the context of a grocery store. Many of these sets
@@ -223,6 +259,11 @@ full meal!
 Here is a graphical representation of rules based on our chosen support,
 confidence, and lift levels filtered to above 2.5.
 
-![](exercises04_files/figure-markdown_strict/unnamed-chunk-9-1.png)
+![](exercises04_files/figure-markdown_strict/unnamed-chunk-13-1.png)
 
 ## Image classification with neural networks
+
+Our write up for this question is stored in the hw4\_jupyter folder.
+Please run the hw4q4.ipynb file as you would. You may need to change
+‘python3’ to ‘python’, ‘pip3’ to ‘pip’ or vice versa. Please reach out
+if the code is not working!

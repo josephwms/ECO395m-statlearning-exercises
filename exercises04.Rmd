@@ -286,9 +286,9 @@ inspect(head(groceries, n = 5))
 ```
 
 
-Next, we'll initialize association analysis with very low support and confidence levels and further tune from there depending on distributions we see when plotting the rules. 
+Next, we'll initialize association analysis with very low support and confidence levels and tune from there depending on distributions we see when plotting the rules. 
 
-Based on spread of confidence and lift, we tweaked support, confidence and minlen parameters to find a sweet spot where confidence is not too restrictive but there is enough variation in lift to identify the most significant associations. Eventually, we arrived at the value of 0.01 for support and set confidence to 0.25.
+Based on spread of confidence and lift, we tweaked 'supp', 'conf' and 'minlen' parameters to find a sweet spot where confidence is not too restrictive but there is enough variation in lift to identify the most significant associations. Eventually, we arrived at parameter values of 0.01 for support and 0.25 for confidence.
 
 
 ```{r, message=FALSE, echo=FALSE, warning=FALSE, results='hide'}
@@ -303,12 +303,21 @@ plot(rules, jitter = 0)
 
 ```
 
-170 is quite a large number for rules in this case. I would like more to analyze more significant associations so I will only focus on lifts that are greater than 2.5.
+170 is quite a large number for rules in this case. Lets only focus on lifts that are greater than 2.5 in order to analyze only significant associations.
 
-```{r, message=FALSE, echo=FALSE, warning=FALSE}
+```{r, message=FALSE, echo=FALSE, warning=FALSE, options(width = 80)}
 rules = subset(rules, lift > 2.5)
 
+ # Round the specified columns
+rules@quality$support <- round(rules@quality$support, 3)
+rules@quality$confidence <- round(rules@quality$confidence, 3)
+rules@quality$coverage <- round(rules@quality$coverage, 3)
+rules@quality$count <- round(rules@quality$count, 3)
+rules@quality$lift <- round(rules@quality$lift, 3)
+ 
+options(width = 140)
 inspect(sort(rules, by = "lift"))
+
 
 ```
 

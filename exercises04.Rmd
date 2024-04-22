@@ -225,16 +225,19 @@ Overall, to appeal to both groups and maximize market outreach, perhaps you are 
 
 
 
-```{r, message=FALSE, echo=FALSE, warning=FALSE}
-
-
-```
 
 
 
 ## Association rules for grocery purchases
 
+*Find some interesting association rules for these shopping baskets. Pick your own thresholds for lift and confidence; just be clear what these thresholds are and how you picked them. Do your discovered item sets make sense? Present your discoveries using an interesting visualization or two, along with no more than one page of typed text.*
+
+
+We'll begin with some initial data wrangling in order to view the data.  See below head() for first 5 baskets.
+
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
+
+
 
 # First we need to transform the text file into a readable format to determine association rules for shopping baskets. 
 
@@ -253,97 +256,44 @@ inspect(head(groceries, n = 5))
 ```
 
 
-First I started with a very low support and confidence levels and further tuned from there depending on the distribution I saw when I plotted the rules. Based on the spread of the confidence and lift, I changed my values in order to find that sweet spot of confidence where I am not being too restrictive and a value for lift to focus on more significant rules. Eventually, I arrived at the value of 0.01 for support and set confidence to 0.25.
+Next, we'll initialize association analysis with very low support and confidence levels and further tuned from there depending on the distributions we saw while plotting the rules. Based on the spread of confidence and lift, we changed values in order to find that sweet spot of confidence which is not too restrictive, and has a lift value which will enable us to focus on more significant rules. Eventually, I arrived at the value of 0.01 for support and set confidence to 0.25.
 
-```{r, message=FALSE, echo=FALSE, warning=FALSE}
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE, results='hide'}
 rules = apriori(groceries, parameter = list(supp = 0.01, conf = 0.25, minlen = 2))
 
+```
+
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
 
 plot(rules, jitter = 0)
 
 ```
 
-170 is quite a large number for rules in this case. I would like more to analyze more significant associations so I will only focus on lifts that are greater than 2.
+170 is quite a large number for rules in this case. I would like more to analyze more significant associations so I will only focus on lifts that are greater than 2.5.
 
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
-rules = subset(rules, lift > 2)
+rules = subset(rules, lift > 2.5)
 
 inspect(sort(rules, by = "lift"))
 
 ```
 
-Looking at the rules sorted by lift, many of these item sets make intuitive sense in the context of a grocery store. Many of these sets are plausible combinations that I can see myself and others buying at a grocery store. Observing the first rule, we can see citrus fruit, other vegetables, and root vegetables being bought together, which is common behavior when purchasing fresh produce. Even combinations with lower lifts make sense. For example, whipped cream, sour cream, and whole milk being bought together indicates typical shopping behavior for dairy products.
+Looking at the rules sorted by lift, many of these item sets make intuitive sense in the context of a grocery store. Many of these sets are plausible combinations that I can see myself and others buying at a grocery store. Observing the first rule, we can see citrus fruit, other vegetables, and root vegetables being bought together, which is common behavior when purchasing fresh produce. The most significant but simple rule using lift as a metric is beef and root vegetables: two parts of a full meal!
 
 
-Here is a graphical representation of rules based on our chosen support, confidence, and lift levels. 
+Here is a graphical representation of rules based on our chosen support, confidence, and lift levels filtered to above 2.5. 
 
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
 plot(rules, method = "graph")
 
 ```
 
+
+
+
 ## Image classification with neural networks
 
-In this problem, you will train a neural network to classify satellite images.  In the [data/EuroSAT_RGB](https://github.com/jgscott/STA380/tree/master/data/EuroSAT_RGB) directory, you will find 11 subdirectories, each corresponding to a different class of land or land use: e.g. industrial, crops, rivers, forest, etc.  Within each subdirectory, you will find examples in .jpg format of each type.  (Thus the name of the directory in which the image lives is the class label.)  
-
-Your job is to set up a neural network that can classify the images as accurately as possible.  Use an 80/20 train test split.  Summarize your model and its accuracy in any way you see fit, but make you include _at a minimum_ the following elements:
-
-- overall test-set accuracy, measured however you think is appropriate   
-- show some of the example images from the test set, together with your model's predicted classes. 
-- a confusion matrix showing the performance of the model on the set test, i.e. a table that cross-tabulates each test set example by (actual class, predicted class).  
-
-I strongly recommend the use of PyTorch in a Jupyter notebook for this problem; look into PyTorch's `ImageFolder` data set class, which will streamline things considerably.  I'll give you the first block of code in my Jupyter notebook, which looks like this. I've handled the resizing and normalization of the images for you -- you can take it from here.
 
 
-```
-# Necessary Imports
-import torch
-import torchvision
-import torchvision.transforms as transforms
-from torchvision.datasets import ImageFolder
-import matplotlib.pyplot as plt
-import numpy as np
-
-# Set the directory where your data is stored
-data_dir = '../data/EuroSAT_RGB'
-
-# Set the batch size for training and testing
-batch_size = 4
-
-# Define a transformation to apply to the images
-transform = transforms.Compose(
-    [transforms.Resize((32, 32)),  # Resize images to 32x32
-     transforms.ToTensor(),  # Convert image to PyTorch Tensor data type
-     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])  # Normalize the images
-
-# Load the training data
-dataset = ImageFolder(root=data_dir, transform=transform)
-
-# Create data loaders for training and testing datasets
-data_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True)
-
-# Print some samples to verify the data loading
-data_iter = iter(data_loader)
-images, labels = data_iter.next()
-print(images.shape, labels.shape)
-
-# Function to show an image
-def imshow(img):
-    img = img / 2 + 0.5  # Unnormalize
-    npimg = img.numpy()
-    plt.imshow(np.transpose(npimg, (1, 2, 0)))
-    plt.show()
-
- # Get some random training images
-dataiter = iter(data_loader)
-images, labels = dataiter.next()
-
-# Show images
-imshow(torchvision.utils.make_grid(images))
-
-# Print labels
-print(' '.join('%5s' % dataset.classes[labels[j]] for j in range(batch_size)))
-
-```
-
-One tip: in our example of a convolutional neural network in class, we had black and white images, and therefore _one_ input channel in our 2D convolutions.  These are RGB images here, and so you'll need to modify the first convolutional layer accordingly to handle _three_ input channels.

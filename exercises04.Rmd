@@ -13,13 +13,14 @@ Aahil Navroz, Joseph Williams, Qi Suqian
 04/22/2023
 
 ## Clustering and PCA
-
+We first did a preliminary analysis to these chemical properties. We plot the correlation plot of them with color and quality. According to the plot, total.sulfur.dioxide, volatile.acidity and chlorides are the 3 most related variables to color and alcohol is the most related variable to quality
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
 library(ggcorrplot)
 library(tidyverse)
 library(ClusterR)
 library(arules)
 library(arulesViz)
+library(rgl)
 
 wine = read.csv("./data/wine.csv")
 chemical = wine[,-(12:13)]
@@ -29,9 +30,66 @@ color_sample$color = as.numeric(color_sample$color == "red")
 quality_sample = wine[,-13]
 ggcorrplot(cor(color_sample),lab = TRUE,hc.order = TRUE)
 ggcorrplot(cor(quality_sample),lab = TRUE,hc.order = TRUE)
-# it seems total.sulfur.dioxide, volatile.acidity and chlorides are the 3 most related variables to color
-# alcohol is the most related variable to quality
-# summary statistic for red and white
+```
+We implemented the PCA algorithm on the 11 chemical properties and showed the PCA variance plot. We choose to decrease the data dimension to 4, which means we choose the first 4 PcA components. We then showed the unit vector of these 4 PCA components.
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+# pca results
+PCApilot = prcomp(chemical, scale=TRUE, rank=4)
+plot(PCApilot)
+summary(PCApilot)
+#the variance decrease slowly after PC4,so we choose to reduce the data dimension to 4
+round(PCApilot$rotation[,1:4],2) 
+```
+Now we plot the wine color data to PC1 and PC2. From all the combination of PC components, PC1 and PC2 best distinguish the red wine to white wine.
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+color_pca = data.frame(wine$color, PCApilot$x[,1:4])
+ggplot(color_pca, aes(x = PC1, y = PC2, color = wine.color)) + 
+  geom_point(alpha = 0.5) +
+  labs(title = "PCA of Wine Chemical Properties",
+       x = "Principal Component1",
+       y = "Principal Componen2",
+       color = "Wine Speices") +
+  theme_minimal() + 
+  theme(legend.position = "right")
+```
+Then we try thw K-means cluster algorithm. We choose to cluster the data into two subsets and constructed the confusion matrix and this the accuracy, which reaches 98.58%. So we think both these 2 methods greatly distinguish the wine color data.
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+Kmeans_clust_col = KMeans_rcpp(chemical, clusters=2, num_init=25)
+col_cluster = Kmeans_clust_col$cluster
+col_cluster = as.factor(col_cluster)
+conf_matrix_col = table(wine$color, col_cluster)
+dimnames(conf_matrix_col) = list(True_Color = c("red","white"), Cluster_Label = c("red","white"))
+print(conf_matrix_col)
+accuracy_col = sum(diag(conf_matrix_col)) / sum(conf_matrix_col)
+print(accuracy_col)
+```
+Then we tried to use PCA to distinguish the wine quality. The plot shows that PCA method doesn't perform well and it's hard to manually distinguish them, so we also made a 3D plot for better visualization. Both plots showed that PCA perform bad for wine quality.
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+# pca for quality
+quality_pca = data.frame(wine$quality, PCApilot$x[,1:4])
+quality_pca$wine.quality = as.factor(quality_pca$wine.quality)
+ggplot(quality_pca, aes(x = PC1, y = PC2, color = wine.quality)) + 
+  geom_point(alpha = 0.5) +
+  labs(title = "PCA of Wine Chemical Properties",
+       x = "Principal Component1",
+       y = "Principal Componen2",
+       color = "Wine Quality") +
+  theme_minimal() + 
+  theme(legend.position = "right")
+open3d()
+plot3d(quality_pca$PC1, quality_pca$PC2, quality_pca$wine.quality, size=3,col=quality_pca$wine.quality)
+```
+Now we check the performance of K-means method for wine quality. The accuracy is only 15%, which is also very bad. As a result, both methods seem not capable of distinguishing the higher from the lower quality wines.
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+# k-means for quality
+Kmeans_clust_qua = KMeans_rcpp(chemical, clusters=7, num_init=25)
+qua_cluster = Kmeans_clust_qua$cluster
+qua_cluster = as.factor(qua_cluster)
+conf_matrix_qua = table(wine$quality, qua_cluster)
+dimnames(conf_matrix_qua) = list(True_Color = c(3,4,5,6,7,8,9),Cluster_Label = c(3,4,5,6,7,8,9))
+print(conf_matrix_qua)
+accuracy_qua = sum(diag(conf_matrix_qua)) / sum(conf_matrix_qua)
+print(accuracy_qua)
 ```
 
 ## Market segmentation

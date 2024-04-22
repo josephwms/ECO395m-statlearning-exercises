@@ -3,6 +3,7 @@ title: 'ECO 395M: StateLearning Exercise 4'
 author: "Aahil Navroz, Joseph Williams, Qi Suqian"
 date: "`r Sys.Date()`"
 output: 
+  html_document:
   md_document:
 ---
 # ECO 395M: StatLearning Exercise 3
@@ -96,36 +97,14 @@ group_counts1 <- market1 %>%
     values_to = "user_count"
   )
 
-# group_counts2 <- market1 %>%
-#   filter(num_groups<3) %>%
-#   summarise(
-#     group1_familyvalues = sum(group1_familyvalues, na.rm = TRUE),
-#     group2_collegeboy = sum(group2_collegeboy, na.rm = TRUE),
-#     group3_fashionable = sum(group3_fashionable, na.rm = TRUE),
-#     group4_yuppie = sum(group4_yuppie, na.rm = TRUE),
-#     group5_neoliberal = sum(group5_neoliberal, na.rm = TRUE),
-#     group6_socialyte = sum(group6_socialyte, na.rm = TRUE)
-#   ) %>%
-#   pivot_longer(
-#     cols = everything(),
-#     names_to = "group",
-#     values_to = "user_count"
-#   )
+print(group_counts1)
 
 # Create the bar plot
-ggplot(group_counts1, aes(x = group, y = user_count)) +
+plot1 = ggplot(group_counts1, aes(x = group, y = user_count)) +
   geom_bar(stat = "identity") +
   ggtitle("Counts by Group for Users in Max 3 Groups") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-# # Create the bar plot
-# ggplot(group_counts2, aes(x = group, y = user_count)) +
-#   geom_bar(stat = "identity") +
-#   ggtitle("Counts by Group for Users in Max 2 Groups") +
-#   ylim(0, 2000) +
-#   theme_minimal() +
-#   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
 Over 1500 users are in the loosely constructed `familyvalues', 'yuppie', and 'socialyte' groups, respectively.  Even with filtering efforts, however, many users are likely counted 2 or even 3 times. Before we go farther in this direction, lets shift to machine learning algorithms so that our clusters are definite and exhaustive.  We'll start with K-means and K_means++ clustering with K=5-7 clusters, since we see 6 key groups off the bat.  See below visualizations and counts per cluster.
@@ -200,22 +179,15 @@ for (k in k_values) {
   
 }
 
-
-
-
 ```
 
-We are able to confirm using unsupervised learning pretty much the same clusters we identified using intuition and basic tools. Labeled variables have centroid values over a certain, relatively-high threshold.  Our results use standard K-means but we've verified that results are repeatable with K-means++ start up. Regarding selection of K we notice the following points:
+We are able to confirm using unsupervised learning pretty much the same clusters we identified using intuition and basic tools. Labeled variables have centroid values over a certain, relatively-high threshold.  Our results use standard K-means but we've verified that results are repeatable with K-means++ start up.
 
-- Each K identifies a 'spam' category where no variables are dominant.
-- K=5 splits up our 'fashionable' and 'socialyte' clusters between the four non-spam groups, so that the only major feature of one of the clusters is `photo_sharing`.  
-- K=6,7 recovers the 'fashionable' cluster, and some of the 'socialyte' cluster. Its likely that the 'socialyte' characteristics `shopping`, `chatter` and `photo sharing` represent popular uses of Twitter which are more easily distributed between users in other categories.
-
-Altogether, its clear that K=6 weeds out the most spam posts and maintains an even distribution between the other categories, a key requirement of clustering. Most importantly, it aligns incredibly well with our opening analysis. Next, our key insights will rely on K-means clustering using K=6 and identify five distinct non-spam groups.
+Altogether, its clear that K=6 weeds out the most spam posts and maintains an even distribution between the other categories, a key requirement of clustering.
 
 
 #### Insights & Recommended Steps
-We've identified 5 roughly even-sized market segments.  Here are the two largest in descending order:
+We've identified 5 roughly even-sized market segments using K-means clustering with K=6.  Here are the two largest in descending order:
 
 - **Health-conscious adults (likely mid-twenties to thirties)**. In my city we call these yoga enthusiasts and REI shoppers 'yuppies', short for 'young professionals'.  This market segment shared twitter engagement in `health_nutrition`, `personal_fitness`, `outdoors`.  This segment also showed notable interest for `eco`, though it did not meet the display threshold.  We recommend an approach that shows sustainability efforts, and connects your product to outdoor engagement and mental health.
 
@@ -256,7 +228,9 @@ inspect(head(groceries, n = 5))
 ```
 
 
-Next, we'll initialize association analysis with very low support and confidence levels and further tuned from there depending on the distributions we saw while plotting the rules. Based on the spread of confidence and lift, we changed values in order to find that sweet spot of confidence which is not too restrictive, and has a lift value which will enable us to focus on more significant rules. Eventually, I arrived at the value of 0.01 for support and set confidence to 0.25.
+Next, we'll initialize association analysis with very low support and confidence levels and further tune from there depending on distributions we see when plotting the rules. 
+
+Based on spread of confidence and lift, we tweaked support, confidence and minlen parameters to find a sweet spot where confidence is not too restrictive but there is enough variation in lift to identify the most significant associations. Eventually, we arrived at the value of 0.01 for support and set confidence to 0.25.
 
 
 ```{r, message=FALSE, echo=FALSE, warning=FALSE, results='hide'}

@@ -17,6 +17,8 @@ Aahil Navroz, Joseph Williams, Qi Suqian
 library(ggcorrplot)
 library(tidyverse)
 library(ClusterR)
+library(arules)
+library(arulesViz)
 
 wine = read.csv("./data/wine.csv")
 chemical = wine[,-(12:13)]
@@ -232,6 +234,53 @@ Overall, to appeal to both groups and maximize market outreach, perhaps you are 
 
 ## Association rules for grocery purchases
 
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+
+# First we need to transform the text file into a readable format to determine association rules for shopping baskets. 
+
+# Read the data from the file
+groceries_raw = readLines("./data/groceries.txt")
+
+# Split each line into items, remove duplicates, and create a list
+groceries_list = lapply(groceries_raw, function(line) unique(strsplit(line, ",")[[1]]))
+
+# Convert the list to transaction class
+groceries = as(groceries_list, "transactions")
+
+# Preview the data
+inspect(head(groceries, n = 5))
+
+```
+
+
+First I started with a very low support and confidence levels and further tuned from there depending on the distribution I saw when I plotted the rules. Based on the spread of the confidence and lift, I changed my values in order to find that sweet spot of confidence where I am not being too restrictive and a value for lift to focus on more significant rules. Eventually, I arrived at the value of 0.01 for support and set confidence of 0.25.
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+rules = apriori(groceries, parameter = list(supp = 0.01, conf = 0.25, minlen = 2))
+
+
+plot(rules, jitter = 0)
+
+```
+
+170 is quite a large number for rules in this case and I would like to focus on more significant associations so I will only set on lifts that are greater than 2.
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+rules = subset(rules, lift > 2)
+
+inspect(sort(rules, by = "lift"))
+
+```
+
+Looking at the rules sorted by lift, many of these item sets make intuitive sense in the context of a grocery store. Many of these sets are plausible combinations that I can see myself and others buying at a grocery store. Observing the first rule, we can see citrus fruit, other vegetables, and root vegetables being bought together, which is common behavior when purchasing fresh produce. Even combinations with lower lifts make sense. For example, whipped cream, sour cream, and whole milk being bought together indicates typical shopping behavior for dairy products.
+
+
+Here is a graphical representation of rules based on our chosen support, confidence, and lift levels. 
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+plot(rules, method = "graph")
+
+```
 
 ## Image classification with neural networks
 

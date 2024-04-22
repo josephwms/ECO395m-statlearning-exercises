@@ -253,7 +253,7 @@ inspect(head(groceries, n = 5))
 ```
 
 
-First I started with a very low support and confidence levels and further tuned from there depending on the distribution I saw when I plotted the rules. Based on the spread of the confidence and lift, I changed my values in order to find that sweet spot of confidence where I am not being too restrictive and a value for lift to focus on more significant rules. Eventually, I arrived at the value of 0.01 for support and set confidence of 0.25.
+First I started with a very low support and confidence levels and further tuned from there depending on the distribution I saw when I plotted the rules. Based on the spread of the confidence and lift, I changed my values in order to find that sweet spot of confidence where I am not being too restrictive and a value for lift to focus on more significant rules. Eventually, I arrived at the value of 0.01 for support and set confidence to 0.25.
 
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
 rules = apriori(groceries, parameter = list(supp = 0.01, conf = 0.25, minlen = 2))
@@ -263,7 +263,7 @@ plot(rules, jitter = 0)
 
 ```
 
-170 is quite a large number for rules in this case and I would like to focus on more significant associations so I will only set on lifts that are greater than 2.
+170 is quite a large number for rules in this case. I would like more to analyze more significant associations so I will only focus on lifts that are greater than 2.
 
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
 rules = subset(rules, lift > 2)

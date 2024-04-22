@@ -131,86 +131,98 @@ Don’t forget to put ice in the cooler!
 
 ## Association rules for grocery purchases
 
+*Find some interesting association rules for these shopping baskets.
+Pick your own thresholds for lift and confidence; just be clear what
+these thresholds are and how you picked them. Do your discovered item
+sets make sense? Present your discoveries using an interesting
+visualization or two, along with no more than one page of typed text.*
+
+We’ll begin with some initial data wrangling in order to view the data.
+See below head() for first 5 baskets.
+
+    ##     items                      
+    ## [1] {citrus fruit,             
+    ##      margarine,                
+    ##      ready soups,              
+    ##      semi-finished bread}      
+    ## [2] {coffee,                   
+    ##      tropical fruit,           
+    ##      yogurt}                   
+    ## [3] {whole milk}               
+    ## [4] {cream cheese ,            
+    ##      meat spreads,             
+    ##      pip fruit,                
+    ##      yogurt}                   
+    ## [5] {condensed milk,           
+    ##      long life bakery product, 
+    ##      other vegetables,         
+    ##      whole milk}
+
+Next, we’ll initialize association analysis with very low support and
+confidence levels and further tuned from there depending on the
+distributions we saw while plotting the rules. Based on the spread of
+confidence and lift, we changed values in order to find that sweet spot
+of confidence which is not too restrictive, and has a lift value which
+will enable us to focus on more significant rules. Eventually, I arrived
+at the value of 0.01 for support and set confidence to 0.25.
+
+![](exercises04_files/figure-markdown_strict/unnamed-chunk-7-1.png)
+
+170 is quite a large number for rules in this case. I would like more to
+analyze more significant associations so I will only focus on lifts that
+are greater than 2.5.
+
+    ##      lhs                                       rhs                support   
+    ## [1]  {citrus fruit, other vegetables}       => {root vegetables}  0.01037112
+    ## [2]  {other vegetables, tropical fruit}     => {root vegetables}  0.01230300
+    ## [3]  {beef}                                 => {root vegetables}  0.01738688
+    ## [4]  {citrus fruit, root vegetables}        => {other vegetables} 0.01037112
+    ## [5]  {root vegetables, tropical fruit}      => {other vegetables} 0.01230300
+    ## [6]  {other vegetables, whole milk}         => {root vegetables}  0.02318251
+    ## [7]  {curd, whole milk}                     => {yogurt}           0.01006609
+    ## [8]  {other vegetables, yogurt}             => {root vegetables}  0.01291307
+    ## [9]  {other vegetables, yogurt}             => {tropical fruit}   0.01230300
+    ## [10] {other vegetables, rolls/buns}         => {root vegetables}  0.01220132
+    ## [11] {tropical fruit, whole milk}           => {root vegetables}  0.01199797
+    ## [12] {rolls/buns, root vegetables}          => {other vegetables} 0.01220132
+    ## [13] {root vegetables, yogurt}              => {other vegetables} 0.01291307
+    ## [14] {whole milk, yogurt}                   => {tropical fruit}   0.01514997
+    ## [15] {pip fruit}                            => {tropical fruit}   0.02043721
+    ## [16] {tropical fruit, whole milk}           => {yogurt}           0.01514997
+    ## [17] {whipped/sour cream, yogurt}           => {other vegetables} 0.01016777
+    ## [18] {other vegetables, whipped/sour cream} => {yogurt}           0.01016777
+    ##      confidence coverage   lift     count
+    ## [1]  0.3591549  0.02887646 3.295045 102  
+    ## [2]  0.3427762  0.03589222 3.144780 121  
+    ## [3]  0.3313953  0.05246568 3.040367 171  
+    ## [4]  0.5862069  0.01769192 3.029608 102  
+    ## [5]  0.5845411  0.02104728 3.020999 121  
+    ## [6]  0.3097826  0.07483477 2.842082 228  
+    ## [7]  0.3852140  0.02613116 2.761356  99  
+    ## [8]  0.2974239  0.04341637 2.728698 127  
+    ## [9]  0.2833724  0.04341637 2.700550 121  
+    ## [10] 0.2863962  0.04260295 2.627525 120  
+    ## [11] 0.2836538  0.04229792 2.602365 118  
+    ## [12] 0.5020921  0.02430097 2.594890 120  
+    ## [13] 0.5000000  0.02582613 2.584078 127  
+    ## [14] 0.2704174  0.05602440 2.577089 149  
+    ## [15] 0.2701613  0.07564820 2.574648 201  
+    ## [16] 0.3581731  0.04229792 2.567516 149  
+    ## [17] 0.4901961  0.02074225 2.533410 100  
+    ## [18] 0.3521127  0.02887646 2.524073 100
+
+Looking at the rules sorted by lift, many of these item sets make
+intuitive sense in the context of a grocery store. Many of these sets
+are plausible combinations that I can see myself and others buying at a
+grocery store. Observing the first rule, we can see citrus fruit, other
+vegetables, and root vegetables being bought together, which is common
+behavior when purchasing fresh produce. The most significant but simple
+rule using lift as a metric is beef and root vegetables: two parts of a
+full meal!
+
+Here is a graphical representation of rules based on our chosen support,
+confidence, and lift levels filtered to above 2.5.
+
+![](exercises04_files/figure-markdown_strict/unnamed-chunk-9-1.png)
+
 ## Image classification with neural networks
-
-In this problem, you will train a neural network to classify satellite
-images. In the
-[data/EuroSAT\_RGB](https://github.com/jgscott/STA380/tree/master/data/EuroSAT_RGB)
-directory, you will find 11 subdirectories, each corresponding to a
-different class of land or land use: e.g. industrial, crops, rivers,
-forest, etc. Within each subdirectory, you will find examples in .jpg
-format of each type. (Thus the name of the directory in which the image
-lives is the class label.)
-
-Your job is to set up a neural network that can classify the images as
-accurately as possible. Use an 80/20 train test split. Summarize your
-model and its accuracy in any way you see fit, but make you include *at
-a minimum* the following elements:
-
--   overall test-set accuracy, measured however you think is
-    appropriate  
--   show some of the example images from the test set, together with
-    your model’s predicted classes.
--   a confusion matrix showing the performance of the model on the set
-    test, i.e. a table that cross-tabulates each test set example by
-    (actual class, predicted class).
-
-I strongly recommend the use of PyTorch in a Jupyter notebook for this
-problem; look into PyTorch’s `ImageFolder` data set class, which will
-streamline things considerably. I’ll give you the first block of code in
-my Jupyter notebook, which looks like this. I’ve handled the resizing
-and normalization of the images for you – you can take it from here.
-
-    # Necessary Imports
-    import torch
-    import torchvision
-    import torchvision.transforms as transforms
-    from torchvision.datasets import ImageFolder
-    import matplotlib.pyplot as plt
-    import numpy as np
-
-    # Set the directory where your data is stored
-    data_dir = '../data/EuroSAT_RGB'
-
-    # Set the batch size for training and testing
-    batch_size = 4
-
-    # Define a transformation to apply to the images
-    transform = transforms.Compose(
-        [transforms.Resize((32, 32)),  # Resize images to 32x32
-         transforms.ToTensor(),  # Convert image to PyTorch Tensor data type
-         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])  # Normalize the images
-
-    # Load the training data
-    dataset = ImageFolder(root=data_dir, transform=transform)
-
-    # Create data loaders for training and testing datasets
-    data_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True)
-
-    # Print some samples to verify the data loading
-    data_iter = iter(data_loader)
-    images, labels = data_iter.next()
-    print(images.shape, labels.shape)
-
-    # Function to show an image
-    def imshow(img):
-        img = img / 2 + 0.5  # Unnormalize
-        npimg = img.numpy()
-        plt.imshow(np.transpose(npimg, (1, 2, 0)))
-        plt.show()
-
-     # Get some random training images
-    dataiter = iter(data_loader)
-    images, labels = dataiter.next()
-
-    # Show images
-    imshow(torchvision.utils.make_grid(images))
-
-    # Print labels
-    print(' '.join('%5s' % dataset.classes[labels[j]] for j in range(batch_size)))
-
-One tip: in our example of a convolutional neural network in class, we
-had black and white images, and therefore *one* input channel in our 2D
-convolutions. These are RGB images here, and so you’ll need to modify
-the first convolutional layer accordingly to handle *three* input
-channels.
